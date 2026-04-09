@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>タビ 的照護日誌</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: #EAF8FF; min-height: 100vh; }
+  input:focus { outline: 2px solid #3B9EE844; border-color: #3B9EE8 !important; }
+  @media(min-width:768px) {
+    .app-layout { flex-direction: row !important; }
+    .sidebar { display: flex !important; width: 220px !important; min-height: 100vh; }
+    .topbar { display: none !important; }
+    .bottomnav { display: none !important; }
+    .main-content { padding: 32px 36px !important; }
+    .content-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; align-items: start; }
+    .full-col { grid-column: 1 / -1; }
+    .stat-grid { grid-template-columns: repeat(4, 1fr) !important; }
+  }
+  @media(max-width:767px) {
+    .sidebar { display: none !important; }
+    .stat-grid { grid-template-columns: 1fr 1fr !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const DB_URL = "https://tabi-data-default-rtdb.firebaseio.com";
+
+const DEFAULT_FOODS = [
+  { name: "乾飼料", kcalPer100g: 350, customizable: true },
+  { name: "濕食罐頭", kcalPer100g: 90 },
+  { name: "生食", kcalPer100g: 130 },
+  { name: "零食", kcalPer100g: 300 },
+  { name: "自訂", kcalPer100g: null },
+];
+const POOP_TYPES = ["尿尿", "大便"];
+const POOP_STATUS = ["正常", "偏軟", "偏硬", "血絲", "其他"];
+const ACTIVITY_TYPES = ["玩耍", "梳毛", "抱抱", "曬太陽", "外出", "其他"];
+
+const C = {
+  blue: "#3B9EE8", teal: "#2EC4B0", green: "#3DBE8A",
+  lightBg: "#EAF8FF", cardBg: "rgba(255,255,255,0.92)",
+  text: "#1a3a4a", muted: "#6b9ab0", border: "rgba(60,180,220,0.18)",
+  pill: "rgba(61,214,200,0.13)", danger: "#e24b4a",
+};
+
+const { useState, useEffect, useCallback, useRef } = React;
+
+function calcDailyKcal(w, a, n) {
+  if (!w || !a) return null;
+  const rer = 70 * Math.pow(w, 0.75);
+  const m = a < 4 ? 3.0 : a < 12 ? 2.5 : n ? 1.2 : 1.4;
+  return Math.round(rer * m);
+}
+function now() { return new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }); }
+function today() { return new Date().toLocaleDateString("zh-TW"); }
+
+async function fbGet(path) {
+  const res = await fetch(`${DB_URL}/${path}.json`);
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+async function fbSet(path, data) {
+  const res = await fetch(`${DB_URL}/${path}.json`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+function useFirebase(path, init, pollMs = 5000) {
+  const [val, setVal] = useState(init);
+  const [status, setStatus] = useState("loading");
+  const valRef = useRef(init);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await fbGet(path);
+      const next = data === null ? init : data;
+      valRef.current = next;
+      setVal(next);
+      setStatus("ready");
+    } catch { setStatus("error"); }
+  }, [path]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const id = setInterval(load, pollMs);
+    return () => clearInterval(id);
+  }, [load, pollMs]);
+
+  const save = useCallback(async (updater) => {
+    const next = typeof updater === "function" ? updater(valRef.current) : updater;
+    valRef.current = next;
+    setVal(next);
+    try { await fbSet(path, next); } catch {}
+  }, [path]);
+
+  return [val, save, status];
+}
+
+const NAV = [
+  { key: "summary", label: "今日摘要", icon: "⊞" },
+  { key: "feed", label: "餵食紀錄", icon: "◎" },
+  { key: "poop", label: "如廁紀錄", icon: "◇" },
+  { key: "activity", label: "活動紀錄", icon: "▷" },
+  { key: "settings", label: "設定", icon: "⊙" },
+];
+
+function App() {
+  const [tab, setTab] = useState("summary");
+  const [feeds, setFeeds, feedsStatus] = useFirebase("feeds", []);
+  const [poops, setPoops, poopsStatus] = useFirebase("poops", []);
+  const [acts, setActs, actsStatus] = useFirebase("acts", []);
+  const [profile, setProfile, profileStatus] = useFirebase("profile", { weightKg: "", ageMonths: "", neutered: true });
+  const [dryKcal, setDryKcal] = useFirebase("dryKcal", 350);
+
+  const synced = [feedsStatus, poopsStatus, actsStatus, profileStatus].every(s => s === "ready");
+  const error = [feedsStatus, poopsStatus, actsStatus].some(s => s === "error");
+
+  const foods = DEFAULT_FOODS.map(f => f.name === "乾飼料" ? { ...f, kcalPer100g: dryKcal } : f);
+  const dailyGoal = calcDailyKcal(parseFloat(profile?.weightKg), parseFloat(profile?.ageMonths), profile?.neutered) || 250;
+  const todayFeeds = (feeds || []).filter(f => f.date === today());
+  const todayPoops = (poops || []).filter(p => p.date === today());
+  const todayActs = (acts || []).filter(a => a.date === today());
+  const totalKcal = todayFeeds.reduce((s, f) => s + (f.kcal || 0), 0);
+  const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, acts: acts||[], setActs, profile: profile||{}, setProfile, dryKcal, setDryKcal, foods, dailyGoal, todayFeeds, todayPoops, todayActs, totalKcal };
+
+  return (
+    <div style={{ fontFamily: "'Noto Sans TC',sans-serif", minHeight: "100vh", background: C.lightBg, display: "flex", flexDirection: "column" }}>
+      <div className="app-layout" style={{ display: "flex", flex: 1 }}>
+        <aside className="sidebar" style={{ display: "none", flexDirection: "column", background: "#fff", borderRight: `1px solid ${C.border}` }}>
+          <div style={{ padding: "28px 24px 20px", background: `linear-gradient(160deg,${C.blue},${C.teal})` }}>
+            <div style={{ fontSize: 28, marginBottom: 4 }}>🐾</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>タビ 的照護日誌</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>{today()}</div>
+          </div>
+          <nav style={{ padding: "16px 12px", flex: 1 }}>
+            {NAV.map(n => (
+              <button key={n.key} onClick={() => setTab(n.key)} style={{
+                display: "flex", alignItems: "center", gap: 10, width: "100%",
+                padding: "10px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+                background: tab === n.key ? `${C.blue}15` : "transparent",
+                color: tab === n.key ? C.blue : C.muted,
+                fontWeight: tab === n.key ? 700 : 400, fontSize: 14, marginBottom: 4,
+              }}>
+                <span style={{ fontSize: 16 }}>{n.icon}</span>{n.label}
+              </button>
+            ))}
+          </nav>
+          <div style={{ padding: "14px 18px", borderTop: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: error ? C.danger : synced ? C.green : C.muted, display: "inline-block" }} />
+              <span style={{ fontSize: 11, color: C.muted }}>{error ? "連線失敗" : synced ? "雲端同步中" : "連線中…"}</span>
+            </div>
+            {synced && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>每 5 秒自動同步</div>}
+          </div>
+        </aside>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <header className="topbar" style={{ background: `linear-gradient(90deg,${C.blue},${C.teal})`, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>タビ 的照護日誌</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>{today()}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: error ? C.danger : synced ? "#fff" : "rgba(255,255,255,0.45)", display: "inline-block" }} />
+              <span style={{ fontSize: 22 }}>🐾</span>
+            </div>
+          </header>
+
+          <main className="main-content" style={{ flex: 1, padding: "16px 14px 80px", overflowY: "auto" }}>
+            <div style={{ maxWidth: 960, margin: "0 auto" }}>
+              {synced && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, background: `${C.green}15`, border: `1px solid ${C.green}30`, borderRadius: 10, padding: "8px 14px" }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, display: "inline-block" }} />
+                  <span style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Firebase 雲端同步</span>
+                  <span style={{ fontSize: 11, color: C.muted, marginLeft: 4 }}>兩人共用同一份資料 · 每 5 秒更新</span>
+                </div>
+              )}
+              {error && (
+                <div style={{ marginBottom: 16, background: `${C.danger}12`, border: `1px solid ${C.danger}30`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: C.danger }}>
+                  Firebase 連線失敗，請確認網路或資料庫規則
+                </div>
+              )}
+              {!synced && !error && (
+                <div style={{ marginBottom: 16, background: `${C.blue}10`, border: `1px solid ${C.blue}20`, borderRadius: 10, padding: "8px 14px", fontSize: 12, color: C.blue }}>
+                  正在連線 Firebase…
+                </div>
+              )}
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 20 }}>
+                {NAV.find(n => n.key === tab)?.label}
+              </div>
+              {tab === "summary" && <Summary ctx={ctx} setTab={setTab} />}
+              {tab === "feed" && <FeedTab ctx={ctx} />}
+              {tab === "poop" && <PoopTab ctx={ctx} />}
+              {tab === "activity" && <ActivityTab ctx={ctx} />}
+              {tab === "settings" && <SettingsTab ctx={ctx} />}
+            </div>
+          </main>
+
+          <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100 }}>
+            {NAV.map(n => (
+              <button key={n.key} onClick={() => setTab(n.key)} style={{
+                flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer",
+                color: tab === n.key ? C.blue : C.muted, fontSize: 10, fontWeight: tab === n.key ? 700 : 400,
+                borderTop: `2px solid ${tab === n.key ? C.blue : "transparent"}`,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              }}>
+                <span style={{ fontSize: 16 }}>{n.icon}</span>{n.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Summary({ ctx, setTab }) {
+  const { todayFeeds, todayPoops, todayActs, totalKcal, dailyGoal, profile } = ctx;
+  const pct = Math.min(100, Math.round((totalKcal / dailyGoal) * 100));
+  const hasProfile = profile?.weightKg && profile?.ageMonths;
+  const lastFeed = todayFeeds[todayFeeds.length - 1];
+  const lastPoop = todayPoops[todayPoops.length - 1];
+  const lastAct = todayActs[todayActs.length - 1];
+  return (
+    <div>
+      {!hasProfile && (
+        <div style={{ background: `${C.blue}15`, border: `1px solid ${C.blue}30`, borderRadius: 12, padding: "10px 16px", marginBottom: 16, fontSize: 13, color: C.blue }}>
+          前往「設定」輸入 タビ 的體重和年紀，計算精準每日熱量
+        </div>
+      )}
+      <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+        <StatCard label="今日熱量" value={`${totalKcal}`} unit={`/ ${dailyGoal} kcal`} color={C.blue} onClick={() => setTab("feed")} sub={`${pct}% 每日目標`} />
+        <StatCard label="今日餵食" value={`${todayFeeds.length}`} unit="次" color={C.teal} onClick={() => setTab("feed")} sub={lastFeed ? `最後 ${lastFeed.time}` : "尚無紀錄"} />
+        <StatCard label="今日如廁" value={`${todayPoops.length}`} unit="次" color={C.green} onClick={() => setTab("poop")} sub={lastPoop ? `${lastPoop.time} · ${lastPoop.status}` : "尚無紀錄"} />
+        <StatCard label="今日活動" value={`${todayActs.length}`} unit="次" color="#9b7fe8" onClick={() => setTab("activity")} sub={lastAct ? `${lastAct.time} · ${lastAct.type}` : "尚無紀錄"} />
+      </div>
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.muted }}>熱量進度</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: C.blue }}>{totalKcal} <span style={{ fontSize: 13, color: C.muted }}>kcal</span></span>
+        </div>
+        <div style={{ background: `${C.blue}15`, borderRadius: 99, height: 10, overflow: "hidden" }}>
+          <div style={{ width: pct + "%", height: "100%", background: pct >= 100 ? C.danger : `linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius: 99, transition: "width .4s" }} />
+        </div>
+        <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>{pct}% · 目標 {dailyGoal} kcal</div>
+      </Card>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>今日紀錄</div>
+      <div className="content-grid" style={{ display: "grid", gap: 12 }}>
+        <RecentList title="餵食" items={todayFeeds} renderItem={f => `${f.time}　${f.food} ${f.grams}g　${f.kcal} kcal`} color={C.blue} />
+        <RecentList title="如廁" items={todayPoops} renderItem={p => `${p.time}　${p.type}　${p.status}`} color={C.teal} />
+        <RecentList title="活動" items={todayActs} renderItem={a => `${a.time}　${a.type}${a.duration ? `　${a.duration}分鐘` : ""}`} color="#9b7fe8" />
+      </div>
+    </div>
+  );
+}
+
+function FeedTab({ ctx }) {
+  const { feeds, setFeeds, foods } = ctx;
+  const [food, setFood] = useState(foods[0]?.name || "乾飼料");
+  const [customKcal, setCustomKcal] = useState("");
+  const [grams, setGrams] = useState("");
+  const [note, setNote] = useState("");
+  const [showRef, setShowRef] = useState(false);
+  const preset = foods.find(f => f.name === food);
+  const kcalPer100 = food === "自訂" ? parseFloat(customKcal) || 0 : preset?.kcalPer100g || 0;
+  const kcal = grams ? Math.round((parseFloat(grams) / 100) * kcalPer100) : 0;
+  const todayFeeds = (feeds||[]).filter(f => f.date === today());
+  const add = () => {
+    if (!grams) return;
+    setFeeds(prev => [...(prev||[]), { id: Date.now(), date: today(), time: now(), food, grams: parseFloat(grams), kcal, note }]);
+    setGrams(""); setNote("");
+  };
+  return (
+    <div className="content-grid" style={{ display: "grid", gap: 20 }}>
+      <Card className="full-col">
+        <SLabel>食物種類</SLabel>
+        <PillGroup items={foods.map(f => f.name)} active={food} setActive={setFood} />
+        {food === "自訂" && <SInput label="熱量 (kcal/100g)" type="number" value={customKcal} onChange={e => setCustomKcal(e.target.value)} placeholder="例：200" />}
+        {food === "乾飼料" && <div style={{ fontSize: 11, color: C.blue, marginBottom: 10 }}>目前設定：{preset?.kcalPer100g} kcal/100g</div>}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <SInput label="份量 (g)" type="number" value={grams} onChange={e => setGrams(e.target.value)} placeholder="例：50" />
+          <div>
+            <SLabel>估算熱量</SLabel>
+            <div style={{ padding: "9px 12px", borderRadius: 10, background: `${C.blue}10`, border: `1px solid ${C.blue}25`, fontSize: 18, fontWeight: 700, color: C.blue }}>{kcal > 0 ? `${kcal} kcal` : "—"}</div>
+          </div>
+        </div>
+        <SInput label="備註（可選）" value={note} onChange={e => setNote(e.target.value)} placeholder="例：很快吃完" />
+        <PrimaryBtn onClick={add} color={C.blue}>新增餵食</PrimaryBtn>
+      </Card>
+      <Card className="full-col">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: C.text }}>今日紀錄</span>
+          <button onClick={() => setShowRef(!showRef)} style={{ fontSize: 12, color: C.blue, background: "none", border: "none", cursor: "pointer" }}>熱量參考表 {showRef ? "▲" : "▼"}</button>
+        </div>
+        {showRef && (
+          <div style={{ background: `${C.teal}10`, borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 6 }}>
+            {foods.filter(f => f.kcalPer100g).map(f => (
+              <div key={f.name} style={{ background: "#fff", borderRadius: 8, padding: "8px 12px", border: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                <span style={{ color: C.text }}>{f.name}</span>
+                <span style={{ color: C.blue, fontWeight: 600 }}>{f.kcalPer100g}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {todayFeeds.length === 0 && <Empty />}
+        {todayFeeds.map(f => (
+          <Row key={f.id} onDel={() => setFeeds(prev => (prev||[]).filter(x => x.id !== f.id))}>
+            <Tag color={C.blue}>{f.time}</Tag>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{f.food}</span>
+            <span style={{ fontSize: 12, color: C.muted }}>{f.grams}g</span>
+            <span style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginLeft: "auto" }}>{f.kcal} kcal</span>
+          </Row>
+        ))}
+        {todayFeeds.length > 0 && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end" }}>
+            <span style={{ fontSize: 13, color: C.muted }}>合計：</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.blue, marginLeft: 6 }}>{todayFeeds.reduce((s, f) => s + f.kcal, 0)} kcal</span>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function PoopTab({ ctx }) {
+  const { poops, setPoops } = ctx;
+  const [type, setType] = useState(POOP_TYPES[0]);
+  const [status, setStatus] = useState(POOP_STATUS[0]);
+  const [note, setNote] = useState("");
+  const todayPoops = (poops||[]).filter(p => p.date === today());
+  const add = () => { setPoops(prev => [...(prev||[]), { id: Date.now(), date: today(), time: now(), type, status, note }]); setNote(""); };
+  return (
+    <div className="content-grid" style={{ display: "grid", gap: 20 }}>
+      <Card>
+        <SLabel>如廁類型</SLabel>
+        <PillGroup items={POOP_TYPES} active={type} setActive={setType} color={C.teal} />
+        <SLabel>狀況</SLabel>
+        <PillGroup items={POOP_STATUS} active={status} setActive={setStatus} color={C.teal} danger={["血絲"]} />
+        <SInput label="備註（可選）" value={note} onChange={e => setNote(e.target.value)} placeholder="例：貓砂量正常" />
+        <PrimaryBtn onClick={add} color={C.teal}>新增如廁紀錄</PrimaryBtn>
+      </Card>
+      <Card>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 12 }}>今日紀錄</div>
+        {todayPoops.length === 0 && <Empty />}
+        {todayPoops.map(p => (
+          <Row key={p.id} onDel={() => setPoops(prev => (prev||[]).filter(x => x.id !== p.id))}>
+            <Tag color={C.teal}>{p.time}</Tag>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{p.type}</span>
+            <span style={{ fontSize: 12, color: p.status === "正常" ? C.green : C.danger, fontWeight: 600, marginLeft: "auto" }}>{p.status}</span>
+          </Row>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+function ActivityTab({ ctx }) {
+  const { acts, setActs } = ctx;
+  const [type, setType] = useState(ACTIVITY_TYPES[0]);
+  const [duration, setDuration] = useState("");
+  const [note, setNote] = useState("");
+  const todayActs = (acts||[]).filter(a => a.date === today());
+  const add = () => { setActs(prev => [...(prev||[]), { id: Date.now(), date: today(), time: now(), type, duration, note }]); setDuration(""); setNote(""); };
+  return (
+    <div className="content-grid" style={{ display: "grid", gap: 20 }}>
+      <Card>
+        <SLabel>活動類型</SLabel>
+        <PillGroup items={ACTIVITY_TYPES} active={type} setActive={setType} color="#9b7fe8" />
+        <SInput label="時長（分鐘，可選）" type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="例：15" />
+        <SInput label="備註（可選）" value={note} onChange={e => setNote(e.target.value)} placeholder="例：追逗貓棒" />
+        <PrimaryBtn onClick={add} color="#9b7fe8">新增活動紀錄</PrimaryBtn>
+      </Card>
+      <Card>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 12 }}>今日紀錄</div>
+        {todayActs.length === 0 && <Empty />}
+        {todayActs.map(a => (
+          <Row key={a.id} onDel={() => setActs(prev => (prev||[]).filter(x => x.id !== a.id))}>
+            <Tag color="#9b7fe8">{a.time}</Tag>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{a.type}</span>
+            {a.duration && <span style={{ fontSize: 12, color: C.green, marginLeft: "auto" }}>{a.duration} 分鐘</span>}
+          </Row>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+function SettingsTab({ ctx }) {
+  const { profile, setProfile, dryKcal, setDryKcal } = ctx;
+  const [w, setW] = useState(profile?.weightKg || "");
+  const [a, setA] = useState(profile?.ageMonths || "");
+  const [n, setN] = useState(profile?.neutered ?? true);
+  const [d, setD] = useState(dryKcal || 350);
+  const [saved, setSaved] = useState(false);
+  const preview = calcDailyKcal(parseFloat(w), parseFloat(a), n);
+  const ageLabel = m => { if (!m) return ""; const mo = parseFloat(m); if (mo < 12) return `${mo} 個月`; const y = Math.floor(mo/12), r = mo%12; return r ? `${y} 歲 ${r} 個月` : `${y} 歲`; };
+  const save = () => { setProfile({ weightKg: w, ageMonths: a, neutered: n }); setDryKcal(parseFloat(d) || 350); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  return (
+    <div className="content-grid" style={{ display: "grid", gap: 20 }}>
+      <Card>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>タビ 的基本資料</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
+          <SInput label="年紀（月齡）" type="number" value={a} onChange={e => setA(e.target.value)} placeholder="例：36" />
+        </div>
+        {a && <div style={{ fontSize: 11, color: C.teal, marginBottom: 10 }}>= {ageLabel(a)}</div>}
+        <SLabel>結紮狀態</SLabel>
+        <PillGroup items={["已結紮", "未結紮"]} active={n ? "已結紮" : "未結紮"} setActive={v => setN(v === "已結紮")} />
+      </Card>
+      <Card>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>每日熱量估算</div>
+        {preview ? (
+          <>
+            <div style={{ fontSize: 36, fontWeight: 700, color: C.blue }}>{preview} <span style={{ fontSize: 14, color: C.muted }}>kcal</span></div>
+            <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8, marginTop: 8 }}>
+              結紮成貓 ×1.2　未結紮成貓 ×1.4<br />
+              成長期(&lt;12月) ×2.5　幼貓(&lt;4月) ×3.0
+            </div>
+          </>
+        ) : <div style={{ color: C.muted, fontSize: 13 }}>請先填入體重和年紀</div>}
+      </Card>
+      <Card className="full-col">
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>乾飼料熱量設定</div>
+        <SInput label="乾飼料熱量 (kcal/100g)" type="number" value={d} onChange={e => setD(e.target.value)} placeholder="例：350" />
+        <PrimaryBtn onClick={save} color={saved ? C.green : C.blue}>{saved ? "✓ 已儲存並同步！" : "儲存設定"}</PrimaryBtn>
+      </Card>
+    </div>
+  );
+}
+
+// UI helpers
+function Card({ children, style, className }) {
+  return <div className={className} style={{ background: C.cardBg, borderRadius: 16, border: `1px solid ${C.border}`, padding: 18, boxShadow: "0 2px 12px rgba(59,158,232,0.07)", marginBottom: 0, ...style }}>{children}</div>;
+}
+function StatCard({ label, value, unit, color, onClick, sub }) {
+  return (
+    <div onClick={onClick} style={{ background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}`, padding: 16, cursor: "pointer", boxShadow: "0 2px 8px rgba(59,158,232,0.06)" }}>
+      <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 6 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+        <span style={{ fontSize: 26, fontWeight: 700, color }}>{value}</span>
+        <span style={{ fontSize: 11, color: C.muted }}>{unit}</span>
+      </div>
+      <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{sub}</div>
+    </div>
+  );
+}
+function RecentList({ title, items, renderItem, color }) {
+  return (
+    <Card>
+      <div style={{ fontWeight: 700, fontSize: 13, color, marginBottom: 8 }}>{title}</div>
+      {items.length === 0 ? <div style={{ fontSize: 12, color: C.muted, opacity: 0.6 }}>尚無紀錄</div> : items.slice(-3).map((item, i) => (
+        <div key={i} style={{ fontSize: 12, color: C.text, padding: "5px 0", borderBottom: `1px solid ${C.border}` }}>{renderItem(item)}</div>
+      ))}
+    </Card>
+  );
+}
+function PillGroup({ items, active, setActive, color, danger = [] }) {
+  const ac = color || C.blue;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+      {items.map(item => {
+        const isActive = active === item;
+        const isDanger = danger.includes(item) && isActive;
+        return (
+          <button key={item} onClick={() => setActive(item)} style={{
+            padding: "5px 14px", borderRadius: 99, border: `1px solid ${isActive ? "transparent" : C.border}`,
+            background: isDanger ? C.danger : isActive ? ac : C.pill,
+            color: isActive ? "#fff" : C.muted, fontSize: 13, fontWeight: isActive ? 700 : 400, cursor: "pointer",
+          }}>{item}</button>
+        );
+      })}
+    </div>
+  );
+}
+function SLabel({ children }) { return <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600 }}>{children}</div>; }
+function SInput({ label, ...props }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {label && <SLabel>{label}</SLabel>}
+      <input {...props} style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14, background: "rgba(255,255,255,0.85)", color: C.text }} />
+    </div>
+  );
+}
+function PrimaryBtn({ onClick, children, color }) {
+  return <button onClick={onClick} style={{ width: "100%", padding: "11px 0", background: `linear-gradient(90deg,${color||C.blue},${(color||C.teal)}cc)`, color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 4 }}>{children}</button>;
+}
+function Row({ children, onDel }) {
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "9px 0", borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>{children}</div>
+      <button onClick={onDel} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 14, opacity: 0.55 }}>✕</button>
+    </div>
+  );
+}
+function Tag({ children, color }) {
+  return <span style={{ background: `${color}20`, color, fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 99 }}>{children}</span>;
+}
+function Empty() { return <div style={{ color: C.muted, fontSize: 12, textAlign: "center", padding: "16px 0", opacity: 0.5 }}>還沒有今日紀錄</div>; }
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
