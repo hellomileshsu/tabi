@@ -122,17 +122,22 @@ function App() {
   const [acts, setActs, actsStatus] = useFirebase("acts", []);
   const [profile, setProfile, profileStatus] = useFirebase("profile", { weightKg: "", ageMonths: "", neutered: true });
   const [dryKcal, setDryKcal] = useFirebase("dryKcal", 350);
+  const [customFoods, setCustomFoods] = useFirebase("customFoods", []);
 
   const synced = [feedsStatus, poopsStatus, actsStatus, profileStatus].every(s => s === "ready");
   const error = [feedsStatus, poopsStatus, actsStatus].some(s => s === "error");
 
-  const foods = DEFAULT_FOODS.map(f => f.name === "乾飼料" ? { ...f, kcalPer100g: dryKcal } : f);
+  const foods = [
+    ...DEFAULT_FOODS.filter(f => f.name !== "自訂").map(f => f.name === "乾飼料" ? { ...f, kcalPer100g: dryKcal } : f),
+    ...(customFoods || []).map(f => ({ ...f, isCustomBrand: true })),
+    { name: "自訂", kcalPer100g: null },
+  ];
   const dailyGoal = calcDailyKcal(parseFloat(profile?.weightKg), parseFloat(profile?.ageMonths), profile?.neutered) || 250;
   const todayFeeds = (feeds || []).filter(f => f.date === today());
   const todayPoops = (poops || []).filter(p => p.date === today());
   const todayActs = (acts || []).filter(a => a.date === today());
   const totalKcal = todayFeeds.reduce((s, f) => s + (f.kcal || 0), 0);
-  const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, acts: acts||[], setActs, profile: profile||{}, setProfile, dryKcal, setDryKcal, foods, dailyGoal, todayFeeds, todayPoops, todayActs, totalKcal };
+  const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, acts: acts||[], setActs, profile: profile||{}, setProfile, dryKcal, setDryKcal, customFoods: customFoods||[], setCustomFoods, foods, dailyGoal, todayFeeds, todayPoops, todayActs, totalKcal };
 
   return (
     <div style={{ fontFamily: "'Noto Sans TC',sans-serif", minHeight: "100vh", background: C.lightBg, display: "flex", flexDirection: "column" }}>
@@ -397,15 +402,25 @@ function ActivityTab({ ctx }) {
 }
 
 function SettingsTab({ ctx }) {
-  const { profile, setProfile, dryKcal, setDryKcal } = ctx;
+  const { profile, setProfile, dryKcal, setDryKcal, customFoods, setCustomFoods } = ctx;
   const [w, setW] = useState(profile?.weightKg || "");
   const [a, setA] = useState(profile?.ageMonths || "");
   const [n, setN] = useState(profile?.neutered ?? true);
   const [d, setD] = useState(dryKcal || 350);
   const [saved, setSaved] = useState(false);
+  const [brandType, setBrandType] = useState("罐頭");
+  const [brandName, setBrandName] = useState("");
+  const [brandKcal, setBrandKcal] = useState("");
   const preview = calcDailyKcal(parseFloat(w), parseFloat(a), n);
   const ageLabel = m => { if (!m) return ""; const mo = parseFloat(m); if (mo < 12) return `${mo} 個月`; const y = Math.floor(mo/12), r = mo%12; return r ? `${y} 歲 ${r} 個月` : `${y} 歲`; };
   const save = () => { setProfile({ weightKg: w, ageMonths: a, neutered: n }); setDryKcal(parseFloat(d) || 350); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const addBrand = () => {
+    if (!brandName.trim() || !brandKcal) return;
+    setCustomFoods(prev => [...(prev||[]), { id: Date.now(), name: brandName.trim(), kcalPer100g: parseFloat(brandKcal), type: brandType }]);
+    setBrandName(""); setBrandKcal("");
+  };
+  const delBrand = id => setCustomFoods(prev => (prev||[]).filter(f => f.id !== id));
+  const typeColor = { "罐頭": C.teal, "乾飼料": C.blue, "其他": "#9b7fe8" };
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
       <Card>
@@ -434,6 +449,29 @@ function SettingsTab({ ctx }) {
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>乾飼料熱量設定</div>
         <SInput label="乾飼料熱量 (kcal/100g)" type="number" value={d} onChange={e => setD(e.target.value)} placeholder="例：350" />
         <PrimaryBtn onClick={save} color={saved ? C.green : C.blue}>{saved ? "✓ 已儲存並同步！" : "儲存設定"}</PrimaryBtn>
+      </Card>
+      <Card className="full-col">
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>自訂食物品牌</div>
+        <SLabel>類型</SLabel>
+        <PillGroup items={["罐頭", "乾飼料", "其他"]} active={brandType} setActive={setBrandType} color={typeColor[brandType]} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <SInput label="品牌 / 食物名稱" value={brandName} onChange={e => setBrandName(e.target.value)} placeholder="例：皇家腎臟處方" />
+          <SInput label="熱量 (kcal/100g)" type="number" value={brandKcal} onChange={e => setBrandKcal(e.target.value)} placeholder="例：85" />
+        </div>
+        <PrimaryBtn onClick={addBrand} color={C.teal}>新增品牌</PrimaryBtn>
+        {customFoods.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 8 }}>已儲存的品牌</div>
+            {customFoods.map(f => (
+              <Row key={f.id} onDel={() => delBrand(f.id)}>
+                <Tag color={typeColor[f.type] || C.muted}>{f.type}</Tag>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{f.name}</span>
+                <span style={{ fontSize: 12, color: C.muted, marginLeft: "auto" }}>{f.kcalPer100g} kcal/100g</span>
+              </Row>
+            ))}
+          </div>
+        )}
+        {customFoods.length === 0 && <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "10px 0", opacity: 0.5 }}>尚未新增自訂品牌</div>}
       </Card>
     </div>
   );
