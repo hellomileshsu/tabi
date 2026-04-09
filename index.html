@@ -262,7 +262,7 @@ function Summary({ ctx, setTab }) {
       </Card>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>今日紀錄</div>
       <div className="content-grid" style={{ display: "grid", gap: 12 }}>
-        <RecentList title="餵食" items={todayFeeds} renderItem={f => `${f.time}　${f.food} ${f.grams}g　${f.kcal} kcal`} color={C.blue} />
+        <RecentList title="餵食" items={todayFeeds} renderItem={f => `${f.time}　${f.food} ${f.grams}g${f.leftover > 0 ? ` 剩${f.leftover}g` : ""}　${f.kcal} kcal`} color={C.blue} />
         <RecentList title="如廁" items={todayPoops} renderItem={p => `${p.time}　${p.type}　${p.status}`} color={C.teal} />
         <RecentList title="活動" items={todayActs} renderItem={a => `${a.time}　${a.type}${a.duration ? `　${a.duration}分鐘` : ""}`} color="#9b7fe8" />
       </div>
@@ -270,21 +270,27 @@ function Summary({ ctx, setTab }) {
   );
 }
 
+function curTimeStr() { const d = new Date(); return d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0"); }
+
 function FeedTab({ ctx }) {
   const { feeds, setFeeds, foods } = ctx;
   const [food, setFood] = useState(foods[0]?.name || "乾飼料");
   const [customKcal, setCustomKcal] = useState("");
   const [grams, setGrams] = useState("");
+  const [leftover, setLeftover] = useState("");
+  const [timeInput, setTimeInput] = useState(curTimeStr);
   const [note, setNote] = useState("");
   const [showRef, setShowRef] = useState(false);
   const preset = foods.find(f => f.name === food);
   const kcalPer100 = food === "自訂" ? parseFloat(customKcal) || 0 : preset?.kcalPer100g || 0;
-  const kcal = grams ? Math.round((parseFloat(grams) / 100) * kcalPer100) : 0;
+  const eatenG = Math.max(0, (parseFloat(grams) || 0) - (parseFloat(leftover) || 0));
+  const kcal = grams ? Math.round((eatenG / 100) * kcalPer100) : 0;
   const todayFeeds = (feeds||[]).filter(f => f.date === today());
   const add = () => {
     if (!grams) return;
-    setFeeds(prev => [...(prev||[]), { id: Date.now(), date: today(), time: now(), food, grams: parseFloat(grams), kcal, note }]);
-    setGrams(""); setNote("");
+    const leftoverVal = parseFloat(leftover) || 0;
+    setFeeds(prev => [...(prev||[]), { id: Date.now(), date: today(), time: timeInput, food, grams: parseFloat(grams), leftover: leftoverVal, kcal, note }]);
+    setGrams(""); setLeftover(""); setNote(""); setTimeInput(curTimeStr());
   };
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
@@ -295,8 +301,12 @@ function FeedTab({ ctx }) {
         {food === "乾飼料" && <div style={{ fontSize: 11, color: C.blue, marginBottom: 10 }}>目前設定：{preset?.kcalPer100g} kcal/100g</div>}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <SInput label="份量 (g)" type="number" value={grams} onChange={e => setGrams(e.target.value)} placeholder="例：50" />
+          <SInput label="剩食 (g，可選)" type="number" value={leftover} onChange={e => setLeftover(e.target.value)} placeholder="例：5" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <SInput label="餵食時間" type="time" value={timeInput} onChange={e => setTimeInput(e.target.value)} />
           <div>
-            <SLabel>估算熱量</SLabel>
+            <SLabel>實際進食熱量</SLabel>
             <div style={{ padding: "9px 12px", borderRadius: 10, background: `${C.blue}10`, border: `1px solid ${C.blue}25`, fontSize: 18, fontWeight: 700, color: C.blue }}>{kcal > 0 ? `${kcal} kcal` : "—"}</div>
           </div>
         </div>
@@ -324,6 +334,7 @@ function FeedTab({ ctx }) {
             <Tag color={C.blue}>{f.time}</Tag>
             <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{f.food}</span>
             <span style={{ fontSize: 12, color: C.muted }}>{f.grams}g</span>
+            {f.leftover > 0 && <span style={{ fontSize: 11, color: C.danger, fontWeight: 600 }}>剩 {f.leftover}g</span>}
             <span style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginLeft: "auto" }}>{f.kcal} kcal</span>
           </Row>
         ))}
