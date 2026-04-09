@@ -272,33 +272,81 @@ function Summary({ ctx, setTab }) {
 
 function curTimeStr() { const d = new Date(); return d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0"); }
 
+const CAT_TYPE_MAP = { "乾飼料": "乾飼料", "濕食罐頭": "罐頭", "生食": "生食", "零食": "零食" };
+
 function FeedTab({ ctx }) {
-  const { feeds, setFeeds, foods } = ctx;
-  const [food, setFood] = useState(foods[0]?.name || "乾飼料");
+  const { feeds, setFeeds, foods, customFoods } = ctx;
+  const categories = foods.filter(f => !f.isCustomBrand);
+  const [category, setCategory] = useState(categories[0]?.name || "乾飼料");
+  const [brand, setBrand] = useState(null);
   const [customKcal, setCustomKcal] = useState("");
   const [grams, setGrams] = useState("");
   const [leftover, setLeftover] = useState("");
   const [timeInput, setTimeInput] = useState(curTimeStr);
   const [note, setNote] = useState("");
   const [showRef, setShowRef] = useState(false);
-  const preset = foods.find(f => f.name === food);
-  const kcalPer100 = food === "自訂" ? parseFloat(customKcal) || 0 : preset?.kcalPer100g || 0;
+  const [editId, setEditId] = useState(null);
+  const [editTime, setEditTime] = useState("");
+  const [editGrams, setEditGrams] = useState("");
+  const [editLeftover, setEditLeftover] = useState("");
+
+  const brandsForCat = (customFoods || []).filter(f => f.type === CAT_TYPE_MAP[category]);
+  const catPreset = categories.find(f => f.name === category);
+  const kcalPer100 = brand
+    ? brand.kcalPer100g
+    : category === "自訂" ? parseFloat(customKcal) || 0 : catPreset?.kcalPer100g || 0;
   const eatenG = Math.max(0, (parseFloat(grams) || 0) - (parseFloat(leftover) || 0));
   const kcal = grams ? Math.round((eatenG / 100) * kcalPer100) : 0;
-  const todayFeeds = (feeds||[]).filter(f => f.date === today());
+  const foodName = brand ? brand.name : category;
+  const todayFeeds = (feeds || []).filter(f => f.date === today());
+
+  const onCategoryChange = cat => { setCategory(cat); setBrand(null); };
+
   const add = () => {
     if (!grams) return;
-    const leftoverVal = parseFloat(leftover) || 0;
-    setFeeds(prev => [...(prev||[]), { id: Date.now(), date: today(), time: timeInput, food, grams: parseFloat(grams), leftover: leftoverVal, kcal, note }]);
+    setFeeds(prev => [...(prev || []), {
+      id: Date.now(), date: today(), time: timeInput,
+      food: foodName, grams: parseFloat(grams), leftover: parseFloat(leftover) || 0, kcal, note
+    }]);
     setGrams(""); setLeftover(""); setNote(""); setTimeInput(curTimeStr());
   };
+
+  const startEdit = f => { setEditId(f.id); setEditTime(f.time); setEditGrams(String(f.grams)); setEditLeftover(String(f.leftover || "")); };
+
+  const saveEdit = f => {
+    const foodItem = foods.find(x => x.name === f.food);
+    const kPer100 = foodItem?.kcalPer100g || (f.grams > 0 ? Math.round(f.kcal / f.grams * 100) : 0);
+    const eg = Math.max(0, (parseFloat(editGrams) || 0) - (parseFloat(editLeftover) || 0));
+    const newKcal = Math.round((eg / 100) * kPer100);
+    setFeeds(prev => (prev || []).map(x => x.id === f.id
+      ? { ...x, time: editTime, grams: parseFloat(editGrams) || x.grams, leftover: parseFloat(editLeftover) || 0, kcal: newKcal }
+      : x));
+    setEditId(null);
+  };
+
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
       <Card className="full-col">
         <SLabel>食物種類</SLabel>
-        <PillGroup items={foods.map(f => f.name)} active={food} setActive={setFood} />
-        {food === "自訂" && <SInput label="熱量 (kcal/100g)" type="number" value={customKcal} onChange={e => setCustomKcal(e.target.value)} placeholder="例：200" />}
-        {food === "乾飼料" && <div style={{ fontSize: 11, color: C.blue, marginBottom: 10 }}>目前設定：{preset?.kcalPer100g} kcal/100g</div>}
+        <PillGroup items={categories.map(f => f.name)} active={category} setActive={onCategoryChange} />
+        {brandsForCat.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <SLabel>品牌（可選）</SLabel>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {brandsForCat.map(b => (
+                <button key={b.id} onClick={() => setBrand(brand?.id === b.id ? null : b)} style={{
+                  padding: "5px 14px", borderRadius: 99,
+                  border: `1px solid ${brand?.id === b.id ? "transparent" : C.border}`,
+                  background: brand?.id === b.id ? C.teal : C.pill,
+                  color: brand?.id === b.id ? "#fff" : C.muted,
+                  fontSize: 13, fontWeight: brand?.id === b.id ? 700 : 400, cursor: "pointer",
+                }}>{b.name} <span style={{ fontSize: 10, opacity: 0.7 }}>({b.kcalPer100g})</span></button>
+              ))}
+            </div>
+          </div>
+        )}
+        {category === "自訂" && <SInput label="熱量 (kcal/100g)" type="number" value={customKcal} onChange={e => setCustomKcal(e.target.value)} placeholder="例：200" />}
+        {category === "乾飼料" && !brand && <div style={{ fontSize: 11, color: C.blue, marginBottom: 10 }}>目前設定：{catPreset?.kcalPer100g} kcal/100g</div>}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <SInput label="份量 (g)" type="number" value={grams} onChange={e => setGrams(e.target.value)} placeholder="例：50" />
           <SInput label="剩食 (g，可選)" type="number" value={leftover} onChange={e => setLeftover(e.target.value)} placeholder="例：5" />
@@ -321,7 +369,7 @@ function FeedTab({ ctx }) {
         {showRef && (
           <div style={{ background: `${C.teal}10`, borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 6 }}>
             {foods.filter(f => f.kcalPer100g).map(f => (
-              <div key={f.name} style={{ background: "#fff", borderRadius: 8, padding: "8px 12px", border: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+              <div key={f.name + (f.id || "")} style={{ background: "#fff", borderRadius: 8, padding: "8px 12px", border: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                 <span style={{ color: C.text }}>{f.name}</span>
                 <span style={{ color: C.blue, fontWeight: 600 }}>{f.kcalPer100g}</span>
               </div>
@@ -329,14 +377,31 @@ function FeedTab({ ctx }) {
           </div>
         )}
         {todayFeeds.length === 0 && <Empty />}
-        {todayFeeds.map(f => (
-          <Row key={f.id} onDel={() => setFeeds(prev => (prev||[]).filter(x => x.id !== f.id))}>
-            <Tag color={C.blue}>{f.time}</Tag>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{f.food}</span>
-            <span style={{ fontSize: 12, color: C.muted }}>{f.grams}g</span>
-            {f.leftover > 0 && <span style={{ fontSize: 11, color: C.danger, fontWeight: 600 }}>剩 {f.leftover}g</span>}
-            <span style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginLeft: "auto" }}>{f.kcal} kcal</span>
-          </Row>
+        {todayFeeds.map(f => editId === f.id ? (
+          <div key={f.id} style={{ padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>{f.food} 編輯中</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <SInput label="時間" type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
+              <SInput label="份量 (g)" type="number" value={editGrams} onChange={e => setEditGrams(e.target.value)} />
+              <SInput label="剩食 (g)" type="number" value={editLeftover} onChange={e => setEditLeftover(e.target.value)} placeholder="0" />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => saveEdit(f)} style={{ flex: 1, padding: "8px 0", background: C.blue, color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>儲存</button>
+              <button onClick={() => setEditId(null)} style={{ padding: "8px 16px", background: `${C.muted}20`, color: C.muted, border: "none", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>取消</button>
+            </div>
+          </div>
+        ) : (
+          <div key={f.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "9px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <Tag color={C.blue}>{f.time}</Tag>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{f.food}</span>
+              <span style={{ fontSize: 12, color: C.muted }}>{f.grams}g</span>
+              {f.leftover > 0 && <span style={{ fontSize: 11, color: C.danger, fontWeight: 600 }}>剩 {f.leftover}g</span>}
+              <span style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginLeft: "auto" }}>{f.kcal} kcal</span>
+            </div>
+            <button onClick={() => startEdit(f)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, opacity: 0.6 }}>✏️</button>
+            <button onClick={() => setFeeds(prev => (prev||[]).filter(x => x.id !== f.id))} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 14, opacity: 0.55 }}>✕</button>
+          </div>
         ))}
         {todayFeeds.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end" }}>
@@ -419,7 +484,7 @@ function SettingsTab({ ctx }) {
   const [n, setN] = useState(profile?.neutered ?? true);
   const [d, setD] = useState(dryKcal || 350);
   const [saved, setSaved] = useState(false);
-  const [brandType, setBrandType] = useState("罐頭");
+  const [brandType, setBrandType] = useState("乾飼料");
   const [brandName, setBrandName] = useState("");
   const [brandKcal, setBrandKcal] = useState("");
   const preview = calcDailyKcal(parseFloat(w), parseFloat(a), n);
@@ -431,7 +496,7 @@ function SettingsTab({ ctx }) {
     setBrandName(""); setBrandKcal("");
   };
   const delBrand = id => setCustomFoods(prev => (prev||[]).filter(f => f.id !== id));
-  const typeColor = { "罐頭": C.teal, "乾飼料": C.blue, "其他": "#9b7fe8" };
+  const typeColor = { "乾飼料": C.blue, "罐頭": C.teal, "生食": C.green, "零食": "#f5a623", "其他": "#9b7fe8" };
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
       <Card>
@@ -464,7 +529,7 @@ function SettingsTab({ ctx }) {
       <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>自訂食物品牌</div>
         <SLabel>類型</SLabel>
-        <PillGroup items={["罐頭", "乾飼料", "其他"]} active={brandType} setActive={setBrandType} color={typeColor[brandType]} />
+        <PillGroup items={["乾飼料", "罐頭", "生食", "零食", "其他"]} active={brandType} setActive={setBrandType} color={typeColor[brandType]} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <SInput label="品牌 / 食物名稱" value={brandName} onChange={e => setBrandName(e.target.value)} placeholder="例：皇家腎臟處方" />
           <SInput label="熱量 (kcal/100g)" type="number" value={brandKcal} onChange={e => setBrandKcal(e.target.value)} placeholder="例：85" />
