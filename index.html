@@ -4,27 +4,45 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>タビ的日誌</title>
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<script>if(localStorage.getItem("dm")==="1")document.documentElement.dataset.dark="1";</script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Noto Sans TC', sans-serif; background: #EAF8FF; min-height: 100vh; }
-  input:focus { outline: 2px solid #3B9EE844; border-color: #3B9EE8 !important; }
-  @media(min-width:768px) {
-    .app-layout { flex-direction: row !important; }
-    .sidebar { display: flex !important; width: 220px !important; min-height: 100vh; }
-    .topbar { display: none !important; }
-    .bottomnav { display: none !important; }
-    .main-content { padding: 32px 36px !important; }
-    .content-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; align-items: start; }
-    .full-col { grid-column: 1 / -1; }
-    .stat-grid { grid-template-columns: repeat(4, 1fr) !important; }
-  }
-  @media(max-width:767px) {
-    .sidebar { display: none !important; }
-    .stat-grid { grid-template-columns: 1fr 1fr !important; }
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F6F7FB; --card:#FFFFFF; --text:#1A1D2E;
+  --muted:#8890A8; --border:#E6E9F4; --pill:#EEF0F8;
+  --input-bg:#FFFFFF; --input-border:#DDE1EE;
+  --shadow:0 1px 4px rgba(30,34,60,0.07); --sidebar-bg:#FFFFFF;
+}
+[data-dark="1"] {
+  --bg:#10121A; --card:#181C28; --text:#DDE2F0;
+  --muted:#4E5670; --border:#252A3C; --pill:#1E2234;
+  --input-bg:#181C28; --input-border:#2A3048;
+  --shadow:0 1px 6px rgba(0,0,0,0.3); --sidebar-bg:#141828;
+}
+body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); min-height:100vh; color:var(--text); transition:background .2s,color .2s; }
+input,button { font-family:inherit; }
+input:focus { outline:none; border-color:#5B8AF0 !important; box-shadow:0 0 0 3px rgba(91,138,240,0.12) !important; }
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator { filter:var(--cal-filter,none); cursor:pointer; opacity:.6; }
+[data-dark="1"] { --cal-filter:invert(0.7); }
+@media(min-width:768px) {
+  .app-layout { flex-direction:row !important; }
+  .sidebar { display:flex !important; width:200px !important; min-height:100vh; }
+  .topbar { display:none !important; }
+  .bottomnav { display:none !important; }
+  .main-content { padding:28px 32px !important; }
+  .content-grid { display:grid !important; grid-template-columns:1fr 1fr !important; gap:16px !important; align-items:start; }
+  .full-col { grid-column:1/-1; }
+  .stat-grid { grid-template-columns:repeat(4,1fr) !important; }
+}
+@media(max-width:767px) {
+  .sidebar { display:none !important; }
+  .stat-grid { grid-template-columns:1fr 1fr !important; }
+}
 </style>
 </head>
 <body>
@@ -44,10 +62,10 @@ const POOP_STATUS = ["正常", "偏軟", "偏硬", "血絲", "其他"];
 const ACTIVITY_TYPES = ["玩耍", "梳毛", "抱抱", "曬太陽", "外出", "其他"];
 
 const C = {
-  blue: "#3B9EE8", teal: "#2EC4B0", green: "#3DBE8A",
-  lightBg: "#EAF8FF", cardBg: "rgba(255,255,255,0.92)",
-  text: "#1a3a4a", muted: "#6b9ab0", border: "rgba(60,180,220,0.18)",
-  pill: "rgba(61,214,200,0.13)", danger: "#e24b4a",
+  blue: "#5B8AF0", teal: "#3EBFB8", green: "#42BB87",
+  orange: "#F5A623", purple: "#9B7FE8", danger: "#E05C5C",
+  bg: "var(--bg)", card: "var(--card)", text: "var(--text)",
+  muted: "var(--muted)", border: "var(--border)", pill: "var(--pill)",
 };
 
 const { useState, useEffect, useCallback, useRef } = React;
@@ -111,22 +129,30 @@ function useFirebase(path, init, pollMs = 5000) {
 }
 
 const NAV = [
-  { key: "summary", label: "今日摘要", icon: "⊞" },
-  { key: "feed", label: "餵食紀錄", icon: "◎" },
-  { key: "poop", label: "如廁紀錄", icon: "◇" },
-  { key: "activity", label: "活動紀錄", icon: "▷" },
-  { key: "settings", label: "設定", icon: "⊙" },
+  { key: "summary",  label: "今日摘要", icon: "ri-home-5-line" },
+  { key: "feed",     label: "餵食紀錄", icon: "ri-restaurant-2-line" },
+  { key: "poop",     label: "如廁紀錄", icon: "ri-drop-line" },
+  { key: "activity", label: "活動紀錄", icon: "ri-run-line" },
+  { key: "settings", label: "設定",     icon: "ri-settings-3-line" },
 ];
 
 function App() {
   const [tab, setTab] = useState("summary");
   const [selectedDate, setSelectedDate] = useState(todayISO);
+  const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1");
   const [feeds, setFeeds, feedsStatus] = useFirebase("feeds", []);
   const [poops, setPoops, poopsStatus] = useFirebase("poops", []);
   const [acts, setActs, actsStatus] = useFirebase("acts", []);
   const [profile, setProfile, profileStatus] = useFirebase("profile", { weightKg: "", ageMonths: "", neutered: true });
   const [dryKcal, setDryKcal] = useFirebase("dryKcal", 350);
   const [customFoods, setCustomFoods] = useFirebase("customFoods", []);
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.dataset.dark = next ? "1" : "0";
+    localStorage.setItem("dm", next ? "1" : "0");
+  };
 
   const synced = [feedsStatus, poopsStatus, actsStatus, profileStatus].every(s => s === "ready");
   const error = [feedsStatus, poopsStatus, actsStatus].some(s => s === "error");
@@ -141,71 +167,68 @@ function App() {
   const todayPoops = (poops || []).filter(p => p.date === selectedDate);
   const todayActs = (acts || []).filter(a => a.date === selectedDate);
   const totalKcal = todayFeeds.reduce((s, f) => s + (f.kcal || 0), 0);
-  const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, acts: acts||[], setActs, profile: profile||{}, setProfile, dryKcal, setDryKcal, customFoods: customFoods||[], setCustomFoods, foods, dailyGoal, todayFeeds, todayPoops, todayActs, totalKcal, selectedDate, setSelectedDate };
+  const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, acts: acts||[], setActs, profile: profile||{}, setProfile, dryKcal, setDryKcal, customFoods: customFoods||[], setCustomFoods, foods, dailyGoal, todayFeeds, todayPoops, todayActs, totalKcal, selectedDate, setSelectedDate, dark, toggleDark };
+
+  const DarkBtn = () => (
+    <button onClick={toggleDark} title={dark ? "切換亮色" : "切換暗色"} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 18, display: "flex", alignItems: "center", padding: 4 }}>
+      <i className={dark ? "ri-sun-line" : "ri-moon-line"} />
+    </button>
+  );
 
   return (
-    <div style={{ fontFamily: "'Noto Sans TC',sans-serif", minHeight: "100vh", background: C.lightBg, display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column" }}>
       <div className="app-layout" style={{ display: "flex", flex: 1 }}>
-        <aside className="sidebar" style={{ display: "none", flexDirection: "column", background: "#fff", borderRight: `1px solid ${C.border}` }}>
-          <div style={{ padding: "28px 24px 20px", background: `linear-gradient(160deg,${C.blue},${C.teal})` }}>
-            <div style={{ fontSize: 28, marginBottom: 4 }}>🐾</div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>タビ的日誌</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>{fmtDate(todayISO())}</div>
+        <aside className="sidebar" style={{ display: "none", flexDirection: "column", background: "var(--sidebar-bg)", borderRight: `1px solid ${C.border}` }}>
+          <div style={{ padding: "24px 20px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <i className="ri-bookmark-3-fill" style={{ color: C.blue, fontSize: 18 }} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>タビ的日誌</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, paddingLeft: 26 }}>{fmtDate(todayISO())}</div>
           </div>
-          <nav style={{ padding: "16px 12px", flex: 1 }}>
+          <nav style={{ padding: "8px 12px", flex: 1 }}>
             {NAV.map(n => (
               <button key={n.key} onClick={() => setTab(n.key)} style={{
                 display: "flex", alignItems: "center", gap: 10, width: "100%",
-                padding: "10px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-                background: tab === n.key ? `${C.blue}15` : "transparent",
+                padding: "9px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+                background: "transparent",
+                borderLeft: `3px solid ${tab === n.key ? C.blue : "transparent"}`,
                 color: tab === n.key ? C.blue : C.muted,
-                fontWeight: tab === n.key ? 700 : 400, fontSize: 14, marginBottom: 4,
+                fontWeight: tab === n.key ? 600 : 400, fontSize: 13, marginBottom: 2,
               }}>
-                <span style={{ fontSize: 16 }}>{n.icon}</span>{n.label}
+                <i className={n.icon} style={{ fontSize: 16, width: 18, textAlign: "center" }} />{n.label}
               </button>
             ))}
           </nav>
-          <div style={{ padding: "14px 18px", borderTop: `1px solid ${C.border}` }}>
+          <div style={{ padding: "12px 16px", borderTop: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: error ? C.danger : synced ? C.green : C.muted, display: "inline-block" }} />
-              <span style={{ fontSize: 11, color: C.muted }}>{error ? "連線失敗" : synced ? "雲端同步中" : "連線中…"}</span>
+              <i className={error ? "ri-cloud-off-line" : synced ? "ri-cloud-check-line" : "ri-cloud-line"} style={{ color: error ? C.danger : synced ? C.green : C.muted, fontSize: 14 }} />
+              <span style={{ fontSize: 11, color: C.muted }}>{error ? "連線失敗" : synced ? "已同步" : "連線中…"}</span>
             </div>
-            {synced && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>每 5 秒自動同步</div>}
+            <DarkBtn />
           </div>
         </aside>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <header className="topbar" style={{ background: `linear-gradient(90deg,${C.blue},${C.teal})`, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>タビ的日誌</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>{fmtDate(todayISO())}</div>
-            </div>
+          <header className="topbar" style={{ background: C.card, borderBottom: `1px solid ${C.border}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: error ? C.danger : synced ? "#fff" : "rgba(255,255,255,0.45)", display: "inline-block" }} />
-              <span style={{ fontSize: 22 }}>🐾</span>
+              <i className="ri-bookmark-3-fill" style={{ color: C.blue, fontSize: 17 }} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>タビ的日誌</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <i className={error ? "ri-cloud-off-line" : synced ? "ri-cloud-check-line" : "ri-cloud-line"} style={{ color: error ? C.danger : synced ? C.green : C.muted, fontSize: 16 }} />
+              <DarkBtn />
             </div>
           </header>
 
           <main className="main-content" style={{ flex: 1, padding: "16px 14px 80px", overflowY: "auto" }}>
             <div style={{ maxWidth: 960, margin: "0 auto" }}>
-              {synced && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, background: `${C.green}15`, border: `1px solid ${C.green}30`, borderRadius: 10, padding: "8px 14px" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, display: "inline-block" }} />
-                  <span style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Firebase 雲端同步</span>
-                  <span style={{ fontSize: 11, color: C.muted, marginLeft: 4 }}>兩人共用同一份資料 · 每 5 秒更新</span>
-                </div>
-              )}
               {error && (
-                <div style={{ marginBottom: 16, background: `${C.danger}12`, border: `1px solid ${C.danger}30`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: C.danger }}>
-                  Firebase 連線失敗，請確認網路或資料庫規則
+                <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 8, fontSize: 12, color: C.danger, background: `${C.danger}12`, border: `1px solid ${C.danger}30` }}>
+                  <i className="ri-error-warning-line" style={{ marginRight: 6 }} />Firebase 連線失敗，請確認網路或資料庫規則
                 </div>
               )}
-              {!synced && !error && (
-                <div style={{ marginBottom: 16, background: `${C.blue}10`, border: `1px solid ${C.blue}20`, borderRadius: 10, padding: "8px 14px", fontSize: 12, color: C.blue }}>
-                  正在連線 Firebase…
-                </div>
-              )}
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 12 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>
                 {NAV.find(n => n.key === tab)?.label}
               </div>
               {tab !== "settings" && <DateNav selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
@@ -217,15 +240,15 @@ function App() {
             </div>
           </main>
 
-          <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100 }}>
+          <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100 }}>
             {NAV.map(n => (
               <button key={n.key} onClick={() => setTab(n.key)} style={{
-                flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer",
-                color: tab === n.key ? C.blue : C.muted, fontSize: 10, fontWeight: tab === n.key ? 700 : 400,
+                flex: 1, padding: "8px 0 6px", border: "none", background: "none", cursor: "pointer",
+                color: tab === n.key ? C.blue : C.muted, fontSize: 9, fontWeight: tab === n.key ? 700 : 400,
                 borderTop: `2px solid ${tab === n.key ? C.blue : "transparent"}`,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
               }}>
-                <span style={{ fontSize: 16 }}>{n.icon}</span>{n.label}
+                <i className={n.icon} style={{ fontSize: 18 }} />{n.label}
               </button>
             ))}
           </nav>
@@ -243,13 +266,14 @@ function DateNav({ selectedDate, setSelectedDate }) {
     const next = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     if (next <= todayISO()) setSelectedDate(next);
   };
+  const iconBtn = { background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 18, display: "flex", alignItems: "center", padding: "0 2px" };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 12, padding: "6px 12px" }}>
-      <button onClick={() => go(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 20, lineHeight: 1, padding: "0 4px" }}>‹</button>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "6px 10px" }}>
+      <button onClick={() => go(-1)} style={iconBtn}><i className="ri-arrow-left-s-line" /></button>
       <input type="date" value={selectedDate} max={todayISO()} onChange={e => e.target.value && setSelectedDate(e.target.value)}
-        style={{ border: "none", background: "none", fontSize: 14, fontWeight: 600, color: C.text, cursor: "pointer", flex: 1, textAlign: "center" }} />
-      <button onClick={() => go(1)} disabled={isToday} style={{ background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? `${C.muted}40` : C.muted, fontSize: 20, lineHeight: 1, padding: "0 4px" }}>›</button>
-      {!isToday && <button onClick={() => setSelectedDate(todayISO())} style={{ fontSize: 11, color: C.blue, background: `${C.blue}12`, border: "none", borderRadius: 8, padding: "3px 10px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>今天</button>}
+        style={{ border: "none", background: "none", fontSize: 13, fontWeight: 600, color: C.text, cursor: "pointer", flex: 1, textAlign: "center" }} />
+      <button onClick={() => go(1)} disabled={isToday} style={{ ...iconBtn, opacity: isToday ? 0.3 : 1, cursor: isToday ? "default" : "pointer" }}><i className="ri-arrow-right-s-line" /></button>
+      {!isToday && <button onClick={() => setSelectedDate(todayISO())} style={{ fontSize: 11, color: C.blue, background: `${C.blue}14`, border: "none", borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>今天</button>}
     </div>
   );
 }
@@ -278,9 +302,9 @@ function MonthChart({ feeds, dailyGoal, selectedDate, setSelectedDate }) {
   return (
     <Card style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <button onClick={() => goMonth(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 20 }}>‹</button>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{year} 年 {month} 月　熱量概覽</span>
-        <button onClick={() => goMonth(1)} disabled={!canNext} style={{ background: "none", border: "none", cursor: canNext ? "pointer" : "default", color: canNext ? C.muted : `${C.muted}30`, fontSize: 20 }}>›</button>
+        <button onClick={() => goMonth(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 18, display: "flex", alignItems: "center" }}><i className="ri-arrow-left-s-line" /></button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{year} 年 {month} 月　熱量概覽</span>
+        <button onClick={() => goMonth(1)} disabled={!canNext} style={{ background: "none", border: "none", cursor: canNext ? "pointer" : "default", color: C.muted, fontSize: 18, opacity: canNext ? 1 : 0.25, display: "flex", alignItems: "center" }}><i className="ri-arrow-right-s-line" /></button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(daysInMonth, 7)}, 1fr)`, gap: 3 }}>
         {Array.from({ length: daysInMonth }, (_, i) => {
@@ -455,7 +479,7 @@ function FeedTab({ ctx }) {
         {showRef && (
           <div style={{ background: `${C.teal}10`, borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 6 }}>
             {foods.filter(f => f.kcalPer100g).map(f => (
-              <div key={f.name + (f.id || "")} style={{ background: "#fff", borderRadius: 8, padding: "8px 12px", border: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+              <div key={f.name + (f.id || "")} style={{ background: C.card, borderRadius: 7, padding: "7px 11px", border: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                 <span style={{ color: C.text }}>{f.name}</span>
                 <span style={{ color: C.blue, fontWeight: 600 }}>{f.kcalPer100g}</span>
               </div>
@@ -473,8 +497,8 @@ function FeedTab({ ctx }) {
               <SInput label="剩食 (g)" type="number" value={editLeftover} onChange={e => setEditLeftover(e.target.value)} placeholder="0" />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => saveEdit(f)} style={{ flex: 1, padding: "8px 0", background: C.blue, color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>儲存</button>
-              <button onClick={() => setEditId(null)} style={{ padding: "8px 16px", background: `${C.muted}20`, color: C.muted, border: "none", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>取消</button>
+              <button onClick={() => saveEdit(f)} style={{ flex: 1, padding: "8px 0", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>儲存</button>
+              <button onClick={() => setEditId(null)} style={{ padding: "8px 16px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>取消</button>
             </div>
           </div>
         ) : (
@@ -486,7 +510,7 @@ function FeedTab({ ctx }) {
               {f.leftover > 0 && <span style={{ fontSize: 11, color: C.danger, fontWeight: 600 }}>剩 {f.leftover}g</span>}
               <span style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginLeft: "auto" }}>{f.kcal} kcal</span>
             </div>
-            <button onClick={() => startEdit(f)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, opacity: 0.6 }}>✏️</button>
+            <button onClick={() => startEdit(f)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
             <button onClick={() => setFeeds(prev => (prev||[]).filter(x => x.id !== f.id))} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 14, opacity: 0.55 }}>✕</button>
           </div>
         ))}
@@ -581,7 +605,7 @@ function SettingsTab({ ctx }) {
     setBrandName(""); setBrandKcal("");
   };
   const delBrand = id => setCustomFoods(prev => (prev||[]).filter(f => f.id !== id));
-  const typeColor = { "乾飼料": C.blue, "罐頭": C.teal, "生食": C.green, "零食": "#f5a623", "其他": "#9b7fe8" };
+  const typeColor = { "乾飼料": C.blue, "罐頭": C.teal, "生食": C.green, "零食": C.orange, "其他": C.purple };
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
       <Card>
@@ -640,14 +664,14 @@ function SettingsTab({ ctx }) {
 
 // UI helpers
 function Card({ children, style, className }) {
-  return <div className={className} style={{ background: C.cardBg, borderRadius: 16, border: `1px solid ${C.border}`, padding: 18, boxShadow: "0 2px 12px rgba(59,158,232,0.07)", marginBottom: 0, ...style }}>{children}</div>;
+  return <div className={className} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 16, boxShadow: "var(--shadow)", marginBottom: 0, ...style }}>{children}</div>;
 }
 function StatCard({ label, value, unit, color, onClick, sub }) {
   return (
-    <div onClick={onClick} style={{ background: C.cardBg, borderRadius: 14, border: `1px solid ${C.border}`, padding: 16, cursor: "pointer", boxShadow: "0 2px 8px rgba(59,158,232,0.06)" }}>
-      <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 6 }}>{label}</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-        <span style={{ fontSize: 26, fontWeight: 700, color }}>{value}</span>
+    <div onClick={onClick} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14, cursor: "pointer" }}>
+      <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+        <span style={{ fontSize: 24, fontWeight: 700, color }}>{value}</span>
         <span style={{ fontSize: 11, color: C.muted }}>{unit}</span>
       </div>
       <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{sub}</div>
@@ -657,8 +681,8 @@ function StatCard({ label, value, unit, color, onClick, sub }) {
 function RecentList({ title, items, renderItem, color }) {
   return (
     <Card>
-      <div style={{ fontWeight: 700, fontSize: 13, color, marginBottom: 8 }}>{title}</div>
-      {items.length === 0 ? <div style={{ fontSize: 12, color: C.muted, opacity: 0.6 }}>尚無紀錄</div> : items.slice(-3).map((item, i) => (
+      <div style={{ fontWeight: 600, fontSize: 12, color, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>{title}</div>
+      {items.length === 0 ? <div style={{ fontSize: 12, color: C.muted, opacity: 0.5 }}>尚無紀錄</div> : items.slice(-3).map((item, i) => (
         <div key={i} style={{ fontSize: 12, color: C.text, padding: "5px 0", borderBottom: `1px solid ${C.border}` }}>{renderItem(item)}</div>
       ))}
     </Card>
@@ -667,45 +691,46 @@ function RecentList({ title, items, renderItem, color }) {
 function PillGroup({ items, active, setActive, color, danger = [] }) {
   const ac = color || C.blue;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
       {items.map(item => {
         const isActive = active === item;
         const isDanger = danger.includes(item) && isActive;
         return (
           <button key={item} onClick={() => setActive(item)} style={{
-            padding: "5px 14px", borderRadius: 99, border: `1px solid ${isActive ? "transparent" : C.border}`,
-            background: isDanger ? C.danger : isActive ? ac : C.pill,
-            color: isActive ? "#fff" : C.muted, fontSize: 13, fontWeight: isActive ? 700 : 400, cursor: "pointer",
+            padding: "5px 13px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: isActive ? 600 : 400,
+            border: `1px solid ${isActive && !isDanger ? ac : C.border}`,
+            background: isDanger ? C.danger : isActive ? ac : "transparent",
+            color: isActive ? "#fff" : C.muted,
           }}>{item}</button>
         );
       })}
     </div>
   );
 }
-function SLabel({ children }) { return <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600 }}>{children}</div>; }
+function SLabel({ children }) { return <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600, letterSpacing: "0.03em" }}>{children}</div>; }
 function SInput({ label, ...props }) {
   return (
     <div style={{ marginBottom: 12 }}>
       {label && <SLabel>{label}</SLabel>}
-      <input {...props} style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14, background: "rgba(255,255,255,0.85)", color: C.text }} />
+      <input {...props} style={{ width: "100%", padding: "8px 11px", borderRadius: 8, border: `1px solid var(--input-border)`, fontSize: 14, background: "var(--input-bg)", color: C.text }} />
     </div>
   );
 }
 function PrimaryBtn({ onClick, children, color }) {
-  return <button onClick={onClick} style={{ width: "100%", padding: "11px 0", background: `linear-gradient(90deg,${color||C.blue},${(color||C.teal)}cc)`, color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 4 }}>{children}</button>;
+  return <button onClick={onClick} style={{ width: "100%", padding: "10px 0", background: color || C.blue, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer", marginTop: 6, letterSpacing: "0.02em" }}>{children}</button>;
 }
 function Row({ children, onDel }) {
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "9px 0", borderBottom: `1px solid ${C.border}` }}>
-      <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>{children}</div>
-      <button onClick={onDel} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 14, opacity: 0.55 }}>✕</button>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>{children}</div>
+      <button onClick={onDel} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", opacity: 0.6 }}><i className="ri-delete-bin-6-line" /></button>
     </div>
   );
 }
 function Tag({ children, color }) {
-  return <span style={{ background: `${color}20`, color, fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 99 }}>{children}</span>;
+  return <span style={{ background: `${color}18`, color, fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4 }}>{children}</span>;
 }
-function Empty() { return <div style={{ color: C.muted, fontSize: 12, textAlign: "center", padding: "16px 0", opacity: 0.5 }}>還沒有今日紀錄</div>; }
+function Empty() { return <div style={{ color: C.muted, fontSize: 12, textAlign: "center", padding: "18px 0", opacity: 0.45 }}>尚無紀錄</div>; }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
