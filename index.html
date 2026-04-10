@@ -76,6 +76,20 @@ function calcDailyKcal(w, a, n) {
   const m = a < 4 ? 3.0 : a < 12 ? 2.5 : n ? 1.2 : 1.4;
   return Math.round(rer * m);
 }
+function birthdateToMonths(bd) {
+  if (!bd) return null;
+  const birth = new Date(bd + "T00:00:00");
+  const now = new Date();
+  const months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+  return Math.max(0, months);
+}
+function ageLabel(months) {
+  if (months === null || months === undefined) return "";
+  if (months < 1) return "不滿 1 個月";
+  if (months < 12) return `${months} 個月`;
+  const y = Math.floor(months / 12), r = months % 12;
+  return r ? `${y} 歲 ${r} 個月` : `${y} 歲`;
+}
 function now() { return new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }); }
 function todayISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function today() { return todayISO(); }
@@ -162,7 +176,8 @@ function App() {
     ...(customFoods || []).map(f => ({ ...f, isCustomBrand: true })),
     { name: "自訂", kcalPer100g: null },
   ];
-  const dailyGoal = calcDailyKcal(parseFloat(profile?.weightKg), parseFloat(profile?.ageMonths), profile?.neutered) || 250;
+  const ageMonths = profile?.birthdate ? birthdateToMonths(profile.birthdate) : parseFloat(profile?.ageMonths);
+  const dailyGoal = calcDailyKcal(parseFloat(profile?.weightKg), ageMonths, profile?.neutered) || 250;
   const todayFeeds = (feeds || []).filter(f => f.date === selectedDate);
   const todayPoops = (poops || []).filter(p => p.date === selectedDate);
   const todayActs = (acts || []).filter(a => a.date === selectedDate);
@@ -340,7 +355,7 @@ function MonthChart({ feeds, dailyGoal, selectedDate, setSelectedDate }) {
 function Summary({ ctx, setTab }) {
   const { todayFeeds, todayPoops, todayActs, totalKcal, dailyGoal, profile, feeds, selectedDate, setSelectedDate } = ctx;
   const pct = Math.min(100, Math.round((totalKcal / dailyGoal) * 100));
-  const hasProfile = profile?.weightKg && profile?.ageMonths;
+  const hasProfile = profile?.weightKg && (profile?.birthdate || profile?.ageMonths);
   const isToday = selectedDate === todayISO();
   const dayLabel = isToday ? "今日" : fmtDateShort(selectedDate);
   const lastFeed = todayFeeds[todayFeeds.length - 1];
@@ -589,16 +604,16 @@ function ActivityTab({ ctx }) {
 function SettingsTab({ ctx }) {
   const { profile, setProfile, dryKcal, setDryKcal, customFoods, setCustomFoods } = ctx;
   const [w, setW] = useState(profile?.weightKg || "");
-  const [a, setA] = useState(profile?.ageMonths || "");
+  const [birthdate, setBirthdate] = useState(profile?.birthdate || "");
   const [n, setN] = useState(profile?.neutered ?? true);
   const [d, setD] = useState(dryKcal || 350);
   const [saved, setSaved] = useState(false);
   const [brandType, setBrandType] = useState("乾飼料");
   const [brandName, setBrandName] = useState("");
   const [brandKcal, setBrandKcal] = useState("");
-  const preview = calcDailyKcal(parseFloat(w), parseFloat(a), n);
-  const ageLabel = m => { if (!m) return ""; const mo = parseFloat(m); if (mo < 12) return `${mo} 個月`; const y = Math.floor(mo/12), r = mo%12; return r ? `${y} 歲 ${r} 個月` : `${y} 歲`; };
-  const save = () => { setProfile({ weightKg: w, ageMonths: a, neutered: n }); setDryKcal(parseFloat(d) || 350); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const bdMonths = birthdateToMonths(birthdate);
+  const preview = calcDailyKcal(parseFloat(w), bdMonths, n);
+  const save = () => { setProfile({ weightKg: w, birthdate, neutered: n }); setDryKcal(parseFloat(d) || 350); setSaved(true); setTimeout(() => setSaved(false), 2000); };
   const addBrand = () => {
     if (!brandName.trim() || !brandKcal) return;
     setCustomFoods(prev => [...(prev||[]), { id: Date.now(), name: brandName.trim(), kcalPer100g: parseFloat(brandKcal), type: brandType }]);
@@ -612,9 +627,9 @@ function SettingsTab({ ctx }) {
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>タビ 的基本資料</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
-          <SInput label="年紀（月齡）" type="number" value={a} onChange={e => setA(e.target.value)} placeholder="例：36" />
+          <SInput label="出生年月日" type="date" value={birthdate} max={todayISO()} onChange={e => setBirthdate(e.target.value)} />
         </div>
-        {a && <div style={{ fontSize: 11, color: C.teal, marginBottom: 10 }}>= {ageLabel(a)}</div>}
+        {bdMonths !== null && <div style={{ fontSize: 11, color: C.teal, marginBottom: 10 }}>= {ageLabel(bdMonths)}</div>}
         <SLabel>結紮狀態</SLabel>
         <PillGroup items={["已結紮", "未結紮"]} active={n ? "已結紮" : "未結紮"} setActive={v => setN(v === "已結紮")} />
       </Card>
