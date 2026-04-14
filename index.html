@@ -298,13 +298,12 @@ function MonthChart({ feeds, dailyGoal, selectedDate, setSelectedDate }) {
   const [year, month] = chartYM.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
   const ISO = todayISO();
+  const R = 14, CIRC = 2 * Math.PI * R;
 
   const dailyKcal = {};
-  const dailyPoops = {};
   (feeds || []).forEach(f => {
-    if (f.date && f.date.startsWith(chartYM)) {
+    if (f.date && f.date.startsWith(chartYM))
       dailyKcal[f.date] = (dailyKcal[f.date] || 0) + (f.kcal || 0);
-    }
   });
 
   const goMonth = delta => {
@@ -321,31 +320,45 @@ function MonthChart({ feeds, dailyGoal, selectedDate, setSelectedDate }) {
         <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{year} 年 {month} 月　熱量概覽</span>
         <button onClick={() => goMonth(1)} disabled={!canNext} style={{ background: "none", border: "none", cursor: canNext ? "pointer" : "default", color: C.muted, fontSize: 18, opacity: canNext ? 1 : 0.25, display: "flex", alignItems: "center" }}><i className="ri-arrow-right-s-line" /></button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(daysInMonth, 7)}, 1fr)`, gap: 3 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1;
           const dateStr = `${chartYM}-${String(day).padStart(2,"0")}`;
           const kcal = dailyKcal[dateStr] || 0;
-          const pct = kcal > 0 ? Math.min(100, Math.round((kcal / dailyGoal) * 100)) : 0;
           const isSel = dateStr === selectedDate;
           const isFuture = dateStr > ISO;
-          const barColor = isSel ? C.teal : kcal >= dailyGoal ? C.danger : C.blue;
+          const pct = kcal > 0 ? Math.min(100, (kcal / dailyGoal) * 100) : 0;
+          const arcColor = kcal === 0 ? null
+            : kcal > dailyGoal * 1.1 ? C.danger
+            : kcal >= dailyGoal * 0.9 ? C.green
+            : C.blue;
+          const dashOffset = CIRC * (1 - pct / 100);
           return (
             <div key={day} onClick={() => !isFuture && setSelectedDate(dateStr)}
-              style={{ cursor: isFuture ? "default" : "pointer", textAlign: "center", opacity: isFuture ? 0.25 : 1 }}>
-              <div style={{ height: 36, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 1 }}>
-                <div style={{ width: "80%", borderRadius: "3px 3px 0 0", background: pct > 0 ? barColor : `${C.muted}25`,
-                  height: pct > 0 ? `${Math.max(8, pct * 0.36)}px` : "2px", transition: "height .2s" }} />
-              </div>
-              <div style={{ fontSize: 9, color: isSel ? C.teal : C.muted, fontWeight: isSel ? 700 : 400 }}>{day}</div>
+              style={{ cursor: isFuture ? "default" : "pointer", opacity: isFuture ? 0.3 : 1,
+                display: "flex", flexDirection: "column", alignItems: "center",
+                padding: "4px 2px", borderRadius: 8,
+                background: isSel ? `${C.blue}18` : "transparent" }}>
+              <svg viewBox="0 0 36 36" width="100%" style={{ maxWidth: 44, display: "block" }}>
+                <circle cx="18" cy="18" r={R} fill="none" stroke="var(--border)" strokeWidth="2.5" />
+                {arcColor && (
+                  <circle cx="18" cy="18" r={R} fill="none" stroke={arcColor} strokeWidth="3"
+                    strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={dashOffset}
+                    transform="rotate(-90 18 18)" />
+                )}
+                <text x="18" y="18" textAnchor="middle" dominantBaseline="central"
+                  fontSize="10" fontWeight={isSel ? 700 : 400}
+                  fill={isSel ? C.blue : "var(--muted)"}>{day}</text>
+              </svg>
             </div>
           );
         })}
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 8, fontSize: 10, color: C.muted }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: C.blue, display: "inline-block" }} />未達標</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: C.danger, display: "inline-block" }} />超標</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: C.teal, display: "inline-block" }} />選中日</span>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10, fontSize: 10, color: C.muted }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: C.blue, display: "inline-block" }} />未達標</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, display: "inline-block" }} />達標</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: C.danger, display: "inline-block" }} />超標</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: `${C.blue}40`, display: "inline-block" }} />選中日</span>
         <span style={{ marginLeft: "auto" }}>點擊日期切換</span>
       </div>
     </Card>
