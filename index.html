@@ -69,7 +69,6 @@ const POOP_SHAPES = [
   { label: "鬆散破碎", group: "腹瀉" },
   { label: "完全液態", group: "腹瀉" },
 ];
-const ACTIVITY_TYPES = ["玩耍", "梳毛", "抱抱", "曬太陽", "外出", "其他"];
 
 const C = {
   blue: "#5B8AF0", teal: "#3EBFB8", green: "#42BB87",
@@ -156,8 +155,8 @@ const NAV = [
   { key: "summary",  label: "今日摘要", icon: "ri-home-5-line" },
   { key: "feed",     label: "餵食紀錄", icon: "ri-restaurant-2-line" },
   { key: "poop",     label: "如廁紀錄", icon: "ri-drop-line" },
-  { key: "activity", label: "活動紀錄", icon: "ri-run-line" },
-  { key: "settings", label: "設定",     icon: "ri-settings-3-line" },
+  { key: "changelog", label: "更新日誌", icon: "ri-history-line" },
+  { key: "settings",  label: "設定",    icon: "ri-settings-3-line" },
 ];
 
 function App() {
@@ -166,7 +165,7 @@ function App() {
   const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1");
   const [feeds, setFeeds, feedsStatus] = useFirebase("feeds", []);
   const [poops, setPoops, poopsStatus] = useFirebase("poops", []);
-  const [acts, setActs, actsStatus] = useFirebase("acts", []);
+  const [changelog, setChangelog, changelogStatus] = useFirebase("changelog", []);
   const [profile, setProfile, profileStatus] = useFirebase("profile", { weightKg: "", ageMonths: "", neutered: true });
   const [dryKcal, setDryKcal] = useFirebase("dryKcal", 350);
   const [customFoods, setCustomFoods] = useFirebase("customFoods", []);
@@ -178,8 +177,8 @@ function App() {
     localStorage.setItem("dm", next ? "1" : "0");
   };
 
-  const synced = [feedsStatus, poopsStatus, actsStatus, profileStatus].every(s => s === "ready");
-  const error = [feedsStatus, poopsStatus, actsStatus].some(s => s === "error");
+  const synced = [feedsStatus, poopsStatus, changelogStatus, profileStatus].every(s => s === "ready");
+  const error = [feedsStatus, poopsStatus, changelogStatus].some(s => s === "error");
 
   const foods = [
     ...DEFAULT_FOODS.filter(f => f.name !== "自訂").map(f => f.name === "乾飼料" ? { ...f, kcalPer100g: dryKcal } : f),
@@ -190,9 +189,12 @@ function App() {
   const dailyGoal = calcDailyKcal(parseFloat(profile?.weightKg), ageMonths, profile?.neutered) || 250;
   const todayFeeds = (feeds || []).filter(f => f.date === selectedDate);
   const todayPoops = (poops || []).filter(p => p.date === selectedDate);
-  const todayActs = (acts || []).filter(a => a.date === selectedDate);
   const totalKcal = todayFeeds.reduce((s, f) => s + (f.kcal || 0), 0);
-  const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, acts: acts||[], setActs, profile: profile||{}, setProfile, dryKcal, setDryKcal, customFoods: customFoods||[], setCustomFoods, foods, dailyGoal, todayFeeds, todayPoops, todayActs, totalKcal, selectedDate, setSelectedDate, dark, toggleDark };
+  const addLog = (action, category, desc) => {
+    const d = new Date();
+    setChangelog(prev => [...(prev||[]), { id: d.getTime(), ts: d.toISOString(), date: todayISO(), action, category, desc }]);
+  };
+  const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, changelog: changelog||[], profile: profile||{}, setProfile, dryKcal, setDryKcal, customFoods: customFoods||[], setCustomFoods, foods, dailyGoal, todayFeeds, todayPoops, totalKcal, selectedDate, setSelectedDate, dark, toggleDark, addLog };
 
   const DarkBtn = () => (
     <button onClick={toggleDark} title={dark ? "切換亮色" : "切換暗色"} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 18, display: "flex", alignItems: "center", padding: 4 }}>
@@ -256,11 +258,11 @@ function App() {
               <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>
                 {NAV.find(n => n.key === tab)?.label}
               </div>
-              {tab !== "settings" && <DateNav selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
+              {tab !== "settings" && tab !== "changelog" && <DateNav selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
               {tab === "summary" && <Summary ctx={ctx} setTab={setTab} />}
               {tab === "feed" && <FeedTab ctx={ctx} />}
               {tab === "poop" && <PoopTab ctx={ctx} />}
-              {tab === "activity" && <ActivityTab ctx={ctx} />}
+              {tab === "changelog" && <ChangelogTab ctx={ctx} />}
               {tab === "settings" && <SettingsTab ctx={ctx} />}
             </div>
           </main>
@@ -376,14 +378,13 @@ function MonthChart({ feeds, dailyGoal, selectedDate, setSelectedDate }) {
 }
 
 function Summary({ ctx, setTab }) {
-  const { todayFeeds, todayPoops, todayActs, totalKcal, dailyGoal, profile, feeds, selectedDate, setSelectedDate } = ctx;
+  const { todayFeeds, todayPoops, totalKcal, dailyGoal, profile, feeds, selectedDate, setSelectedDate } = ctx;
   const pct = Math.min(100, Math.round((totalKcal / dailyGoal) * 100));
   const hasProfile = profile?.weightKg && (profile?.birthdate || profile?.ageMonths);
   const isToday = selectedDate === todayISO();
   const dayLabel = isToday ? "今日" : fmtDateShort(selectedDate);
   const lastFeed = todayFeeds[todayFeeds.length - 1];
   const lastPoop = todayPoops[todayPoops.length - 1];
-  const lastAct = todayActs[todayActs.length - 1];
   return (
     <div>
       {!hasProfile && (
@@ -396,7 +397,6 @@ function Summary({ ctx, setTab }) {
         <StatCard label={`${dayLabel}熱量`} value={`${totalKcal}`} unit={`/ ${dailyGoal} kcal`} color={C.blue} onClick={() => setTab("feed")} sub={`${pct}% 每日目標`} />
         <StatCard label={`${dayLabel}餵食`} value={`${todayFeeds.length}`} unit="次" color={C.teal} onClick={() => setTab("feed")} sub={lastFeed ? `最後 ${lastFeed.time}` : "尚無紀錄"} />
         <StatCard label={`${dayLabel}如廁`} value={`${todayPoops.length}`} unit="次" color={C.green} onClick={() => setTab("poop")} sub={lastPoop ? `${lastPoop.time} · ${lastPoop.type} · ${lastPoop.status}` : "尚無紀錄"} />
-        <StatCard label={`${dayLabel}活動`} value={`${todayActs.length}`} unit="次" color="#9b7fe8" onClick={() => setTab("activity")} sub={lastAct ? `${lastAct.time} · ${lastAct.type}` : "尚無紀錄"} />
       </div>
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
@@ -412,7 +412,6 @@ function Summary({ ctx, setTab }) {
       <div className="content-grid" style={{ display: "grid", gap: 12 }}>
         <RecentList title="餵食" items={todayFeeds} renderItem={f => `${f.time}　${f.food} ${f.grams}g${f.leftover > 0 ? ` 剩${f.leftover}g` : ""}　${f.kcal} kcal`} color={C.blue} />
         <RecentList title="如廁" items={todayPoops} renderItem={p => `${p.time}　${p.type}　${p.amount ?? ""}${p.type === "尿尿" ? "拳頭" : "塊"}${p.shape ? `　${p.shape}` : ""}　${p.status}`} color={C.teal} />
-        <RecentList title="活動" items={todayActs} renderItem={a => `${a.time}　${a.type}${a.duration ? `　${a.duration}分鐘` : ""}`} color="#9b7fe8" />
       </div>
     </div>
   );
@@ -423,7 +422,7 @@ function curTimeStr() { const d = new Date(); return d.getHours().toString().pad
 const CAT_TYPE_MAP = { "乾飼料": "乾飼料", "濕食罐頭": "罐頭", "生食": "生食", "零食": "零食" };
 
 function FeedTab({ ctx }) {
-  const { feeds, setFeeds, foods, customFoods, todayFeeds, selectedDate } = ctx;
+  const { feeds, setFeeds, foods, customFoods, todayFeeds, selectedDate, addLog } = ctx;
   const categories = foods.filter(f => !f.isCustomBrand);
   const [category, setCategory] = useState(categories[0]?.name || "乾飼料");
   const [brand, setBrand] = useState(null);
@@ -456,6 +455,7 @@ function FeedTab({ ctx }) {
       id: Date.now(), date: selectedDate, time: timeInput,
       food: foodName, grams: parseFloat(grams), leftover: parseFloat(leftover) || 0, kcal, note
     }]);
+    addLog("新增", "餵食", `${foodName} ${grams}g · ${kcal} kcal`);
     setGrams(""); setLeftover(""); setNote(""); setTimeInput(curTimeStr());
   };
 
@@ -469,6 +469,7 @@ function FeedTab({ ctx }) {
     setFeeds(prev => (prev || []).map(x => x.id === f.id
       ? { ...x, date: editDate, time: editTime, grams: parseFloat(editGrams) || x.grams, leftover: parseFloat(editLeftover) || 0, kcal: newKcal }
       : x));
+    addLog("編輯", "餵食", `${f.food} → ${editGrams}g · ${newKcal} kcal`);
     setEditId(null);
   };
 
@@ -549,7 +550,7 @@ function FeedTab({ ctx }) {
               <span style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginLeft: "auto" }}>{f.kcal} kcal</span>
             </div>
             <button onClick={() => startEdit(f)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
-            <button onClick={() => setFeeds(prev => (prev||[]).filter(x => x.id !== f.id))} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 14, opacity: 0.55 }}>✕</button>
+            <button onClick={() => { setFeeds(prev => (prev||[]).filter(x => x.id !== f.id)); addLog("刪除", "餵食", `${f.food} ${f.grams}g`); }} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 14, opacity: 0.55 }}>✕</button>
           </div>
         ))}
         {todayFeeds.length > 0 && (
@@ -564,7 +565,7 @@ function FeedTab({ ctx }) {
 }
 
 function PoopTab({ ctx }) {
-  const { poops, setPoops, todayPoops, selectedDate } = ctx;
+  const { poops, setPoops, todayPoops, selectedDate, addLog } = ctx;
   const [type, setType] = useState(POOP_TYPES[0]);
   const isPoop = type === "大便";
   const statusOptions = isPoop ? POOP_STATUS : PEE_STATUS;
@@ -584,6 +585,7 @@ function PoopTab({ ctx }) {
     const rec = { id: Date.now(), date: selectedDate, time: now(), type, amount, status, note };
     if (isPoop) rec.shape = shape;
     setPoops(prev => [...(prev||[]), rec]);
+    addLog("新增", "如廁", `${type} ${amount}${unit}${isPoop ? ` · ${shape}` : ""} · ${status}`);
     setNote("");
   };
   const shapeGroups = ["便秘", "正常", "腹瀉"].map(g => ({
@@ -616,7 +618,7 @@ function PoopTab({ ctx }) {
         <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 12 }}>今日紀錄</div>
         {todayPoops.length === 0 && <Empty />}
         {todayPoops.map(p => (
-          <Row key={p.id} onDel={() => setPoops(prev => (prev||[]).filter(x => x.id !== p.id))}>
+          <Row key={p.id} onDel={() => { setPoops(prev => (prev||[]).filter(x => x.id !== p.id)); addLog("刪除", "如廁", `${p.type} ${p.amount||""}${p.type==="尿尿"?"拳頭":"塊"}`); }}>
             <Tag color={C.teal}>{p.time}</Tag>
             <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{p.type}</span>
             <span style={{ fontSize: 12, color: C.muted }}>{p.amount}{p.type === "尿尿" ? "拳頭" : "塊"}</span>
@@ -629,32 +631,34 @@ function PoopTab({ ctx }) {
   );
 }
 
-function ActivityTab({ ctx }) {
-  const { acts, setActs, todayActs, selectedDate } = ctx;
-  const [type, setType] = useState(ACTIVITY_TYPES[0]);
-  const [duration, setDuration] = useState("");
-  const [note, setNote] = useState("");
-  const add = () => { setActs(prev => [...(prev||[]), { id: Date.now(), date: selectedDate, time: now(), type, duration, note }]); setDuration(""); setNote(""); };
+function ChangelogTab({ ctx }) {
+  const { changelog } = ctx;
+  const sorted = [...(changelog||[])].sort((a, b) => b.id - a.id);
+  const grouped = sorted.reduce((acc, entry) => {
+    (acc[entry.date] = acc[entry.date] || []).push(entry);
+    return acc;
+  }, {});
+  const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+  const actionColor = { "新增": C.green, "刪除": C.danger, "編輯": C.orange };
+  const categoryColor = { "餵食": C.blue, "如廁": C.teal };
   return (
-    <div className="content-grid" style={{ display: "grid", gap: 20 }}>
-      <Card>
-        <SLabel>活動類型</SLabel>
-        <PillGroup items={ACTIVITY_TYPES} active={type} setActive={setType} color="#9b7fe8" />
-        <SInput label="時長（分鐘，可選）" type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="例：15" />
-        <SInput label="備註（可選）" value={note} onChange={e => setNote(e.target.value)} placeholder="例：追逗貓棒" />
-        <PrimaryBtn onClick={add} color="#9b7fe8">新增活動紀錄</PrimaryBtn>
-      </Card>
-      <Card>
-        <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 12 }}>今日紀錄</div>
-        {todayActs.length === 0 && <Empty />}
-        {todayActs.map(a => (
-          <Row key={a.id} onDel={() => setActs(prev => (prev||[]).filter(x => x.id !== a.id))}>
-            <Tag color="#9b7fe8">{a.time}</Tag>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{a.type}</span>
-            {a.duration && <span style={{ fontSize: 12, color: C.green, marginLeft: "auto" }}>{a.duration} 分鐘</span>}
-          </Row>
-        ))}
-      </Card>
+    <div style={{ display: "grid", gap: 16 }}>
+      {dates.length === 0 && (
+        <Card><Empty /></Card>
+      )}
+      {dates.map(date => (
+        <Card key={date}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 10, letterSpacing: "0.04em" }}>{fmtDate(date)}</div>
+          {grouped[date].map(entry => (
+            <div key={entry.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 10, color: C.muted, whiteSpace: "nowrap" }}>{entry.ts.slice(11,16)}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: actionColor[entry.action] || C.muted, background: `${actionColor[entry.action]}18`, padding: "2px 7px", borderRadius: 5 }}>{entry.action}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: categoryColor[entry.category] || C.muted, background: `${categoryColor[entry.category]}18`, padding: "2px 7px", borderRadius: 5 }}>{entry.category}</span>
+              <span style={{ fontSize: 12, color: C.text }}>{entry.desc}</span>
+            </div>
+          ))}
+        </Card>
+      ))}
     </div>
   );
 }
