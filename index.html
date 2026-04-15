@@ -42,7 +42,24 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter:var(--cal-filter,
 @media(max-width:767px) {
   .sidebar { display:none !important; }
   .stat-grid { grid-template-columns:1fr 1fr !important; }
+  /* Last stat card alone in a row → span both columns */
+  .stat-grid > *:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* Tighter card padding on mobile */
+  .card { padding: 12px !important; }
 }
+/* ── Hover states (pointer devices only) ── */
+@media(hover:hover) {
+  button { transition: background .14s, opacity .14s, border-color .14s, color .14s, filter .14s; }
+  .btn-fill:hover:not(:disabled)        { filter: brightness(0.9); }
+  .btn-ghost:hover:not(:disabled)       { background: var(--pill) !important; }
+  .btn-icon:hover:not(:disabled)        { opacity: 1 !important; color: var(--text) !important; }
+  .btn-danger-icon:hover:not(:disabled) { opacity: 1 !important; color: #E05C5C !important; }
+  .nav-btn:hover                        { background: var(--pill) !important; }
+  .hoverable:hover      { box-shadow: 0 6px 20px rgba(30,34,60,0.13); transform: translateY(-1px); }
+  .hoverable-cell:hover { background: var(--pill) !important; }
+}
+.hoverable      { transition: box-shadow .15s, transform .15s; }
+.hoverable-cell { transition: background .14s; }
 </style>
 </head>
 <body>
@@ -254,7 +271,7 @@ function App() {
             </div>
           </header>
 
-          <main className="main-content" style={{ flex: 1, padding: "16px 14px 80px", overflowY: "auto" }}>
+          <main className="main-content" style={{ flex: 1, padding: "16px 14px 88px", overflowY: "auto" }}>
             <div style={{ maxWidth: 960, margin: "0 auto" }}>
               {error && (
                 <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 8, fontSize: 12, color: C.danger, background: `${C.danger}12`, border: `1px solid ${C.danger}30` }}>
@@ -275,13 +292,13 @@ function App() {
 
           <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100 }}>
             {NAV.map(n => (
-              <button key={n.key} onClick={() => setTab(n.key)} style={{
-                flex: 1, padding: "8px 0 6px", border: "none", background: "none", cursor: "pointer",
-                color: tab === n.key ? C.blue : C.muted, fontSize: 9, fontWeight: tab === n.key ? 700 : 400,
+              <button key={n.key} onClick={() => setTab(n.key)} className="nav-btn" style={{
+                flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer",
+                color: tab === n.key ? C.blue : C.muted, fontSize: 11, fontWeight: tab === n.key ? 700 : 400,
                 borderTop: `2px solid ${tab === n.key ? C.blue : "transparent"}`,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
               }}>
-                <i className={n.icon} style={{ fontSize: 18 }} />{n.label}
+                <i className={n.icon} style={{ fontSize: 20 }} />{n.label}
               </button>
             ))}
           </nav>
@@ -868,7 +885,7 @@ function SettingsTab({ ctx }) {
 
 // UI helpers
 function Card({ children, style, className }) {
-  return <div className={className} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 16, boxShadow: "var(--shadow)", marginBottom: 0, ...style }}>{children}</div>;
+  return <div className={`card${className ? " "+className : ""}`} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 16, boxShadow: "var(--shadow)", marginBottom: 0, ...style }}>{children}</div>;
 }
 function StatCard({ label, value, unit, color, onClick, sub }) {
   return (
@@ -893,7 +910,7 @@ function RecentList({ title, items, renderItem, color }) {
   );
 }
 function Counter({ value, onChange, unit }) {
-  const btn = { width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", fontSize: 18, color: C.text, display: "flex", alignItems: "center", justifyContent: "center" };
+  const btn = { width: 40, height: 40, borderRadius: 10, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", fontSize: 20, color: C.text, display: "flex", alignItems: "center", justifyContent: "center" };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
       <button onClick={() => onChange(Math.max(0.5, +(value - 0.5).toFixed(1)))} style={btn}>−</button>
@@ -933,7 +950,7 @@ function SInput({ label, ...props }) {
   );
 }
 function PrimaryBtn({ onClick, children, color }) {
-  return <button onClick={onClick} style={{ width: "100%", padding: "10px 0", background: color || C.blue, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer", marginTop: 6, letterSpacing: "0.02em" }}>{children}</button>;
+  return <button onClick={onClick} className="btn-fill" style={{ width: "100%", padding: "11px 0", minHeight: 44, background: color || C.blue, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer", marginTop: 6, letterSpacing: "0.02em" }}>{children}</button>;
 }
 function Row({ children, onDel }) {
   return (
