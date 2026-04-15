@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
 <title>タビ的日誌</title>
 <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
 <script>if(localStorage.getItem("dm")==="1")document.documentElement.dataset.dark="1";</script>
@@ -46,7 +49,11 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter:var(--cal-filter,
   .stat-grid > *:last-child:nth-child(odd) { grid-column: 1 / -1; }
   /* Tighter card padding on mobile */
   .card { padding: 12px !important; }
+  /* iPhone safe area: push content above home indicator */
+  .main-content { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
 }
+/* Bottom nav always respects safe area (PWA standalone) */
+.bottomnav { padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
 /* ── Hover states (pointer devices only) ── */
 @media(hover:hover) {
   button { transition: background .14s, opacity .14s, border-color .14s, color .14s, filter .14s; }
@@ -271,7 +278,7 @@ function App() {
             </div>
           </header>
 
-          <main className="main-content" style={{ flex: 1, padding: "16px 14px calc(88px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+          <main className="main-content" style={{ flex: 1, padding: "16px 14px 88px", overflowY: "auto" }}>
             <div style={{ maxWidth: 960, margin: "0 auto" }}>
               {error && (
                 <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 8, fontSize: 12, color: C.danger, background: `${C.danger}12`, border: `1px solid ${C.danger}30` }}>
@@ -290,7 +297,7 @@ function App() {
             </div>
           </main>
 
-          <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100, paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100 }}>
             {NAV.map(n => (
               <button key={n.key} onClick={() => setTab(n.key)} className="nav-btn" style={{
                 flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer",
