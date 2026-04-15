@@ -293,14 +293,40 @@ function DateNav({ selectedDate, setSelectedDate }) {
     const next = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     if (next <= todayISO()) setSelectedDate(next);
   };
-  const iconBtn = { background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 18, display: "flex", alignItems: "center", padding: "0 2px" };
+  const [y, m, d] = selectedDate.split("-");
+  const weekday = ["日","一","二","三","四","五","六"][new Date(selectedDate + "T00:00:00").getDay()];
+  const circBtn = active => ({
+    width: 36, height: 36, borderRadius: "50%", border: `1px solid ${C.border}`,
+    background: C.card, cursor: active ? "pointer" : "default",
+    color: C.text, opacity: active ? 1 : 0.25,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 18, flexShrink: 0,
+  });
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "6px 10px" }}>
-      <button onClick={() => go(-1)} style={iconBtn}><i className="ri-arrow-left-s-line" /></button>
-      <input type="date" value={selectedDate} max={todayISO()} onChange={e => e.target.value && setSelectedDate(e.target.value)}
-        style={{ border: "none", background: "none", fontSize: 13, fontWeight: 600, color: C.text, cursor: "pointer", flex: 1, textAlign: "center" }} />
-      <button onClick={() => go(1)} disabled={isToday} style={{ ...iconBtn, opacity: isToday ? 0.3 : 1, cursor: isToday ? "default" : "pointer" }}><i className="ri-arrow-right-s-line" /></button>
-      {!isToday && <button onClick={() => setSelectedDate(todayISO())} style={{ fontSize: 11, color: C.blue, background: `${C.blue}14`, border: "none", borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>今天</button>}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+      <button onClick={() => go(-1)} style={circBtn(true)}><i className="ri-arrow-left-s-line" /></button>
+
+      {/* Clickable date card — opens native date picker */}
+      <div style={{ flex: 1, position: "relative", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "7px 14px", textAlign: "center", cursor: "pointer", overflow: "hidden" }}>
+        <input type="date" value={selectedDate} max={todayISO()} onChange={e => e.target.value && setSelectedDate(e.target.value)}
+          style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+          {parseInt(m)}月{parseInt(d)}日
+        </div>
+        <div style={{ fontSize: 11, color: isToday ? C.green : C.muted, marginTop: 3, fontWeight: isToday ? 600 : 400 }}>
+          {isToday ? "今天・" : ""}{y}年・週{weekday}
+        </div>
+      </div>
+
+      <button onClick={() => go(1)} disabled={isToday} style={circBtn(!isToday)}><i className="ri-arrow-right-s-line" /></button>
+
+      {!isToday && (
+        <button onClick={() => setSelectedDate(todayISO())} style={{
+          height: 36, padding: "0 14px", background: C.blue, color: "#fff",
+          border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700,
+          cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+        }}>今天</button>
+      )}
     </div>
   );
 }
