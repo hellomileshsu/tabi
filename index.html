@@ -54,6 +54,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter:var(--cal-filter,
 }
 /* Bottom nav always respects safe area (PWA standalone) */
 .bottomnav { padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
+/* Push topbar below Dynamic Island / status bar */
+.topbar { padding-top: calc(12px + env(safe-area-inset-top, 0px)) !important; }
 /* ── Hover states (pointer devices only) ── */
 @media(hover:hover) {
   button { transition: background .14s, opacity .14s, border-color .14s, color .14s, filter .14s; }
