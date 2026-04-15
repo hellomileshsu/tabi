@@ -650,7 +650,7 @@ function FeedTab({ ctx }) {
         {todayFeeds.map(f => editId === f.id ? (
           <div key={f.id} style={{ padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>{f.food} 編輯中</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8, marginBottom: 8 }}>
               <SInput label="日期" type="date" value={editDate} onChange={e => setEditDate(e.target.value)} max={todayISO()} />
               <SInput label="時間" type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
               <SInput label="份量 (g)" type="number" value={editGrams} onChange={e => setEditGrams(e.target.value)} />
@@ -840,7 +840,7 @@ function SettingsTab({ ctx }) {
       </Card>
       <Card>
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>タビ 的基本資料</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
           <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
           <SInput label="出生年月日" type="date" value={birthdate} max={todayISO()} onChange={e => setBirthdate(e.target.value)} />
         </div>
