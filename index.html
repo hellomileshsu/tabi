@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>タビ的日誌</title>
 <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
 <script>if(localStorage.getItem("dm")==="1")document.documentElement.dataset.dark="1";</script>
@@ -271,7 +271,7 @@ function App() {
             </div>
           </header>
 
-          <main className="main-content" style={{ flex: 1, padding: "16px 14px 88px", overflowY: "auto" }}>
+          <main className="main-content" style={{ flex: 1, padding: "16px 14px calc(88px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
             <div style={{ maxWidth: 960, margin: "0 auto" }}>
               {error && (
                 <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 8, fontSize: 12, color: C.danger, background: `${C.danger}12`, border: `1px solid ${C.danger}30` }}>
@@ -290,7 +290,7 @@ function App() {
             </div>
           </main>
 
-          <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100 }}>
+          <nav className="bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100, paddingBottom: "env(safe-area-inset-bottom)" }}>
             {NAV.map(n => (
               <button key={n.key} onClick={() => setTab(n.key)} className="nav-btn" style={{
                 flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer",
