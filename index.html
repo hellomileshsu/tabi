@@ -760,7 +760,7 @@ function PoopTab({ ctx }) {
 
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
-      <Card>
+      <Card className="full-col">
         <SLabel>如廁類型</SLabel>
         <PillGroup items={POOP_TYPES} active={type} setActive={handleTypeChange} color={C.teal} />
         <SLabel>量</SLabel>
@@ -796,7 +796,7 @@ function PoopTab({ ctx }) {
         <SInput label="備註（可選）" value={note} onChange={e => setNote(e.target.value)} placeholder="例：貓砂量正常" />
         <PrimaryBtn onClick={add} color={C.teal}>新增如廁紀錄</PrimaryBtn>
       </Card>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 12 }}>今日紀錄</div>
         {todayPoops.length === 0 && <Empty />}
         {todayPoops.map(p => editId === p.id ? (
@@ -905,7 +905,7 @@ function SettingsTab({ ctx }) {
   const typeColor = { "乾飼料": C.blue, "罐頭": C.teal, "生食": C.green, "零食": C.orange, "其他": C.purple };
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>貓咪大頭貼</div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onAvatarFile} />
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -931,7 +931,7 @@ function SettingsTab({ ctx }) {
           </div>
         </div>
       </Card>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>タビ 的基本資料</div>
         <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
         <SInput label="出生年月日" type="date" value={birthdate} max={todayISO()} onChange={e => setBirthdate(e.target.value)} />
@@ -939,7 +939,7 @@ function SettingsTab({ ctx }) {
         <SLabel>結紮狀態</SLabel>
         <PillGroup items={["已結紮", "未結紮"]} active={n ? "已結紮" : "未結紮"} setActive={v => setN(v === "已結紮")} />
       </Card>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>每日熱量估算</div>
         {preview ? (
           <>
