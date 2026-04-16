@@ -694,6 +694,7 @@ function PoopTab({ ctx }) {
   const [status, setStatus] = useState(statusOptions[0]);
   const [shape,  setShape]  = useState(POOP_SHAPES[0].label);
   const [amount, setAmount] = useState(0.5);
+  const [timeInput, setTimeInput] = useState(curTimeStr);
   const [note,   setNote]   = useState("");
   const unit = isPoop ? "塊" : "拳頭";
   const handleTypeChange = v => {
@@ -703,11 +704,11 @@ function PoopTab({ ctx }) {
     setAmount(0.5);
   };
   const add = () => {
-    const rec = { id: Date.now(), date: selectedDate, time: now(), type, amount, status, note };
+    const rec = { id: Date.now(), date: selectedDate, time: timeInput, type, amount, status, note };
     if (isPoop) rec.shape = shape;
     setPoops(prev => [...(prev||[]), rec]);
     addLog("新增", "如廁", `${type} ${amount}${unit}${isPoop ? ` · ${shape}` : ""} · ${status}`);
-    setNote("");
+    setNote(""); setTimeInput(curTimeStr());
   };
   const shapeGroups = ["便秘", "正常", "腹瀉"].map(g => ({
     group: g,
@@ -732,6 +733,23 @@ function PoopTab({ ctx }) {
             </div>
           ))}
         </>}
+        <SLabel>時間</SLabel>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+          {[["現在", null], ["早上", "07:00"], ["中午", "12:00"], ["晚上", "18:00"], ["宵夜", "21:00"]].map(([label, t]) => {
+            const val = t || curTimeStr();
+            const isNow = label === "現在";
+            const active = !isNow && timeInput === t;
+            return (
+              <button key={label} onClick={() => setTimeInput(val)} style={{
+                padding: "4px 11px", borderRadius: 6, fontSize: 12, fontWeight: active ? 700 : 400,
+                border: `1px solid ${active ? C.teal : C.border}`,
+                background: active ? `${C.teal}18` : "transparent",
+                color: active ? C.teal : C.muted, cursor: "pointer",
+              }}>{label}{t ? ` ${t}` : ""}</button>
+            );
+          })}
+        </div>
+        <SInput label="自訂時間" type="time" value={timeInput} onChange={e => setTimeInput(e.target.value)} />
         <SInput label="備註（可選）" value={note} onChange={e => setNote(e.target.value)} placeholder="例：貓砂量正常" />
         <PrimaryBtn onClick={add} color={C.teal}>新增如廁紀錄</PrimaryBtn>
       </Card>
