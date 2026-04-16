@@ -696,13 +696,33 @@ function PoopTab({ ctx }) {
   const [amount, setAmount] = useState(0.5);
   const [timeInput, setTimeInput] = useState(curTimeStr);
   const [note,   setNote]   = useState("");
+
+  const [editId,     setEditId]     = useState(null);
+  const [editDate,   setEditDate]   = useState("");
+  const [editTime,   setEditTime]   = useState("");
+  const [editType,   setEditType]   = useState(POOP_TYPES[0]);
+  const [editAmount, setEditAmount] = useState(0.5);
+  const [editStatus, setEditStatus] = useState("");
+  const [editShape,  setEditShape]  = useState(POOP_SHAPES[0].label);
+  const [editNote,   setEditNote]   = useState("");
+
   const unit = isPoop ? "塊" : "拳頭";
+  const editIsPoop = editType === "大便";
+  const editStatusOptions = editIsPoop ? POOP_STATUS : PEE_STATUS;
+  const editDangerItems   = editIsPoop ? ["帶血"] : ["血尿", "排尿困難"];
+
   const handleTypeChange = v => {
     setType(v);
     setStatus((v === "大便" ? POOP_STATUS : PEE_STATUS)[0]);
     setShape(POOP_SHAPES[0].label);
     setAmount(0.5);
   };
+  const handleEditTypeChange = v => {
+    setEditType(v);
+    setEditStatus((v === "大便" ? POOP_STATUS : PEE_STATUS)[0]);
+    setEditShape(POOP_SHAPES[0].label);
+  };
+
   const add = () => {
     const rec = { id: Date.now(), date: selectedDate, time: timeInput, type, amount, status, note };
     if (isPoop) rec.shape = shape;
@@ -710,11 +730,34 @@ function PoopTab({ ctx }) {
     addLog("新增", "如廁", `${type} ${amount}${unit}${isPoop ? ` · ${shape}` : ""} · ${status}`);
     setNote(""); setTimeInput(curTimeStr());
   };
+
+  const startEdit = p => {
+    setEditId(p.id);
+    setEditDate(p.date || selectedDate);
+    setEditTime(p.time);
+    setEditType(p.type);
+    setEditAmount(p.amount ?? 0.5);
+    setEditStatus(p.status);
+    setEditShape(p.shape || POOP_SHAPES[0].label);
+    setEditNote(p.note || "");
+  };
+
+  const saveEdit = p => {
+    const eUnit = editType === "尿尿" ? "拳頭" : "塊";
+    setPoops(prev => (prev||[]).map(x => x.id === p.id
+      ? { ...x, date: editDate, time: editTime, type: editType, amount: editAmount, status: editStatus,
+          shape: editType === "大便" ? editShape : undefined, note: editNote }
+      : x));
+    addLog("編輯", "如廁", `${editType} ${editAmount}${eUnit} · ${editStatus}`);
+    setEditId(null);
+  };
+
   const shapeGroups = ["便秘", "正常", "腹瀉"].map(g => ({
     group: g,
     items: POOP_SHAPES.filter(s => s.group === g).map(s => s.label),
   }));
   const groupColor = { "便秘": C.orange, "正常": C.green, "腹瀉": C.blue };
+
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
       <Card>
@@ -756,14 +799,46 @@ function PoopTab({ ctx }) {
       <Card>
         <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 12 }}>今日紀錄</div>
         {todayPoops.length === 0 && <Empty />}
-        {todayPoops.map(p => (
-          <Row key={p.id} onDel={() => { setPoops(prev => (prev||[]).filter(x => x.id !== p.id)); addLog("刪除", "如廁", `${p.type} ${p.amount||""}${p.type==="尿尿"?"拳頭":"塊"}`); }}>
-            <Tag color={C.teal}>{p.time}</Tag>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{p.type}</span>
-            <span style={{ fontSize: 12, color: C.muted }}>{p.amount}{p.type === "尿尿" ? "拳頭" : "塊"}</span>
-            {p.shape && <span style={{ fontSize: 11, color: C.muted }}>{p.shape}</span>}
-            <span style={{ fontSize: 12, color: (p.status === "正常" || p.status === "無異常") ? C.green : C.danger, fontWeight: 600, marginLeft: "auto" }}>{p.status}</span>
-          </Row>
+        {todayPoops.map(p => editId === p.id ? (
+          <div key={p.id} style={{ padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>{p.type} 編輯中</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: 8, marginBottom: 8 }}>
+              <SInput label="日期" type="date" value={editDate} onChange={e => setEditDate(e.target.value)} max={todayISO()} />
+              <SInput label="時間" type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
+            </div>
+            <SLabel>類型</SLabel>
+            <PillGroup items={POOP_TYPES} active={editType} setActive={handleEditTypeChange} color={C.teal} />
+            <SLabel>量</SLabel>
+            <Counter value={editAmount} onChange={setEditAmount} unit={editType === "尿尿" ? "拳頭" : "塊"} />
+            <SLabel>狀況</SLabel>
+            <PillGroup items={editStatusOptions} active={editStatus} setActive={setEditStatus} color={C.teal} danger={editDangerItems} />
+            {editIsPoop && <>
+              <SLabel>便便形狀</SLabel>
+              {shapeGroups.map(({ group, items }) => (
+                <div key={group} style={{ marginBottom: 6 }}>
+                  <div style={{ fontSize: 10, color: groupColor[group], fontWeight: 600, marginBottom: 4 }}>{group}</div>
+                  <PillGroup items={items} active={editShape} setActive={setEditShape} color={C.teal} />
+                </div>
+              ))}
+            </>}
+            <SInput label="備註（可選）" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="例：貓砂量正常" />
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={() => saveEdit(p)} style={{ flex: 1, padding: "8px 0", background: C.teal, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>儲存</button>
+              <button onClick={() => setEditId(null)} style={{ padding: "8px 16px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>取消</button>
+            </div>
+          </div>
+        ) : (
+          <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <Tag color={C.teal}>{p.time}</Tag>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{p.type}</span>
+              <span style={{ fontSize: 12, color: C.muted }}>{p.amount}{p.type === "尿尿" ? "拳頭" : "塊"}</span>
+              {p.shape && <span style={{ fontSize: 11, color: C.muted }}>{p.shape}</span>}
+              <span style={{ fontSize: 12, color: (p.status === "正常" || p.status === "無異常") ? C.green : C.danger, fontWeight: 600, marginLeft: "auto" }}>{p.status}</span>
+            </div>
+            <button onClick={() => startEdit(p)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
+            <button onClick={() => { setPoops(prev => (prev||[]).filter(x => x.id !== p.id)); addLog("刪除", "如廁", `${p.type} ${p.amount||""}${p.type==="尿尿"?"拳頭":"塊"}`); }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", opacity: 0.6 }}><i className="ri-delete-bin-6-line" /></button>
+          </div>
         ))}
       </Card>
     </div>
