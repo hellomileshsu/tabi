@@ -2,11 +2,12 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="mobile-web-app-capable" content="yes" />
 <title>タビ的日誌</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
 <script>if(localStorage.getItem("dm")==="1")document.documentElement.dataset.dark="1";</script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -15,20 +16,23 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:#F6F7FB; --card:#FFFFFF; --text:#1A1D2E;
-  --muted:#8890A8; --border:#E6E9F4; --pill:#EEF0F8;
-  --input-bg:#FFFFFF; --input-border:#DDE1EE;
-  --shadow:0 1px 4px rgba(30,34,60,0.07); --sidebar-bg:#FFFFFF;
+  --bg:#f6f5f4; --card:#ffffff; --text:#37352f;
+  --muted:#787672; --border:rgba(0,0,0,0.09); --pill:#f0efed;
+  --input-bg:#ffffff; --input-border:#d9d9d7;
+  --shadow:rgba(0,0,0,0.04) 0px 4px 18px,rgba(0,0,0,0.027) 0px 2px 7.85px,rgba(0,0,0,0.02) 0px 0.8px 2.93px,rgba(0,0,0,0.01) 0px 0.175px 1.04px;
+  --sidebar-bg:#fbfaf9;
 }
 [data-dark="1"] {
-  --bg:#10121A; --card:#181C28; --text:#DDE2F0;
-  --muted:#4E5670; --border:#252A3C; --pill:#1E2234;
-  --input-bg:#181C28; --input-border:#2A3048;
-  --shadow:0 1px 6px rgba(0,0,0,0.3); --sidebar-bg:#141828;
+  --bg:#1a1918; --card:#212120; --text:rgba(255,255,255,0.87);
+  --muted:#6b6b69; --border:rgba(255,255,255,0.09); --pill:#2c2b29;
+  --input-bg:#252423; --input-border:rgba(255,255,255,0.14);
+  --shadow:0 2px 8px rgba(0,0,0,0.35),0 1px 2px rgba(0,0,0,0.25); --sidebar-bg:#161514;
 }
-body { font-family:'Noto Sans TC',sans-serif; background:var(--bg); min-height:100vh; color:var(--text); transition:background .2s,color .2s; }
+body { font-family:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); min-height:100vh; color:var(--text); transition:background .2s,color .2s; }
 input,button { font-family:inherit; }
-input:focus { outline:none; border-color:#5B8AF0 !important; box-shadow:0 0 0 3px rgba(91,138,240,0.12) !important; }
+/* Prevent iOS zoom on focus: font-size must be ≥16px */
+input,select,textarea { font-size:16px !important; }
+input:focus { outline:none; border-color:#0075de !important; box-shadow:0 0 0 3px rgba(0,117,222,0.12) !important; }
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator { filter:var(--cal-filter,none); cursor:pointer; opacity:.6; }
 [data-dark="1"] { --cal-filter:invert(0.7); }
@@ -64,7 +68,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter:var(--cal-filter,
   .btn-icon:hover:not(:disabled)        { opacity: 1 !important; color: var(--text) !important; }
   .btn-danger-icon:hover:not(:disabled) { opacity: 1 !important; color: #E05C5C !important; }
   .nav-btn:hover                        { background: var(--pill) !important; }
-  .hoverable:hover      { box-shadow: 0 6px 20px rgba(30,34,60,0.13); transform: translateY(-1px); }
+  .hoverable:hover      { box-shadow: rgba(0,0,0,0.07) 0px 8px 24px, rgba(0,0,0,0.04) 0px 2px 8px; transform: translateY(-1px); }
   .hoverable-cell:hover { background: var(--pill) !important; }
 }
 .hoverable      { transition: box-shadow .15s, transform .15s; }
@@ -97,8 +101,8 @@ const POOP_SHAPES = [
 ];
 
 const C = {
-  blue: "#5B8AF0", teal: "#3EBFB8", green: "#42BB87",
-  orange: "#F5A623", purple: "#9B7FE8", danger: "#E05C5C",
+  blue: "#0075de", teal: "#2a9d99", green: "#1aae39",
+  orange: "#dd5b00", purple: "#7c3aed", danger: "#e03c3c",
   bg: "var(--bg)", card: "var(--card)", text: "var(--text)",
   muted: "var(--muted)", border: "var(--border)", pill: "var(--pill)",
 };
@@ -287,7 +291,7 @@ function App() {
                   <i className="ri-error-warning-line" style={{ marginRight: 6 }} />Firebase 連線失敗，請確認網路或資料庫規則
                 </div>
               )}
-              <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 12, letterSpacing: "-0.3px" }}>
                 {NAV.find(n => n.key === tab)?.label}
               </div>
               {tab !== "settings" && tab !== "changelog" && <DateNav selectedDate={selectedDate} setSelectedDate={setSelectedDate} />}
@@ -696,13 +700,33 @@ function PoopTab({ ctx }) {
   const [amount, setAmount] = useState(0.5);
   const [timeInput, setTimeInput] = useState(curTimeStr);
   const [note,   setNote]   = useState("");
+
+  const [editId,     setEditId]     = useState(null);
+  const [editDate,   setEditDate]   = useState("");
+  const [editTime,   setEditTime]   = useState("");
+  const [editType,   setEditType]   = useState(POOP_TYPES[0]);
+  const [editAmount, setEditAmount] = useState(0.5);
+  const [editStatus, setEditStatus] = useState("");
+  const [editShape,  setEditShape]  = useState(POOP_SHAPES[0].label);
+  const [editNote,   setEditNote]   = useState("");
+
   const unit = isPoop ? "塊" : "拳頭";
+  const editIsPoop = editType === "大便";
+  const editStatusOptions = editIsPoop ? POOP_STATUS : PEE_STATUS;
+  const editDangerItems   = editIsPoop ? ["帶血"] : ["血尿", "排尿困難"];
+
   const handleTypeChange = v => {
     setType(v);
     setStatus((v === "大便" ? POOP_STATUS : PEE_STATUS)[0]);
     setShape(POOP_SHAPES[0].label);
     setAmount(0.5);
   };
+  const handleEditTypeChange = v => {
+    setEditType(v);
+    setEditStatus((v === "大便" ? POOP_STATUS : PEE_STATUS)[0]);
+    setEditShape(POOP_SHAPES[0].label);
+  };
+
   const add = () => {
     const rec = { id: Date.now(), date: selectedDate, time: timeInput, type, amount, status, note };
     if (isPoop) rec.shape = shape;
@@ -710,14 +734,37 @@ function PoopTab({ ctx }) {
     addLog("新增", "如廁", `${type} ${amount}${unit}${isPoop ? ` · ${shape}` : ""} · ${status}`);
     setNote(""); setTimeInput(curTimeStr());
   };
+
+  const startEdit = p => {
+    setEditId(p.id);
+    setEditDate(p.date || selectedDate);
+    setEditTime(p.time);
+    setEditType(p.type);
+    setEditAmount(p.amount ?? 0.5);
+    setEditStatus(p.status);
+    setEditShape(p.shape || POOP_SHAPES[0].label);
+    setEditNote(p.note || "");
+  };
+
+  const saveEdit = p => {
+    const eUnit = editType === "尿尿" ? "拳頭" : "塊";
+    setPoops(prev => (prev||[]).map(x => x.id === p.id
+      ? { ...x, date: editDate, time: editTime, type: editType, amount: editAmount, status: editStatus,
+          shape: editType === "大便" ? editShape : undefined, note: editNote }
+      : x));
+    addLog("編輯", "如廁", `${editType} ${editAmount}${eUnit} · ${editStatus}`);
+    setEditId(null);
+  };
+
   const shapeGroups = ["便秘", "正常", "腹瀉"].map(g => ({
     group: g,
     items: POOP_SHAPES.filter(s => s.group === g).map(s => s.label),
   }));
   const groupColor = { "便秘": C.orange, "正常": C.green, "腹瀉": C.blue };
+
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
-      <Card>
+      <Card className="full-col">
         <SLabel>如廁類型</SLabel>
         <PillGroup items={POOP_TYPES} active={type} setActive={handleTypeChange} color={C.teal} />
         <SLabel>量</SLabel>
@@ -744,7 +791,7 @@ function PoopTab({ ctx }) {
                 padding: "4px 11px", borderRadius: 6, fontSize: 12, fontWeight: active ? 700 : 400,
                 border: `1px solid ${active ? C.teal : C.border}`,
                 background: active ? `${C.teal}18` : "transparent",
-                color: active ? C.teal : C.muted, cursor: "pointer",
+                color: active ? C.teal : C.text, cursor: "pointer",
               }}>{label}{t ? ` ${t}` : ""}</button>
             );
           })}
@@ -753,17 +800,49 @@ function PoopTab({ ctx }) {
         <SInput label="備註（可選）" value={note} onChange={e => setNote(e.target.value)} placeholder="例：貓砂量正常" />
         <PrimaryBtn onClick={add} color={C.teal}>新增如廁紀錄</PrimaryBtn>
       </Card>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 12 }}>今日紀錄</div>
         {todayPoops.length === 0 && <Empty />}
-        {todayPoops.map(p => (
-          <Row key={p.id} onDel={() => { setPoops(prev => (prev||[]).filter(x => x.id !== p.id)); addLog("刪除", "如廁", `${p.type} ${p.amount||""}${p.type==="尿尿"?"拳頭":"塊"}`); }}>
-            <Tag color={C.teal}>{p.time}</Tag>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{p.type}</span>
-            <span style={{ fontSize: 12, color: C.muted }}>{p.amount}{p.type === "尿尿" ? "拳頭" : "塊"}</span>
-            {p.shape && <span style={{ fontSize: 11, color: C.muted }}>{p.shape}</span>}
-            <span style={{ fontSize: 12, color: (p.status === "正常" || p.status === "無異常") ? C.green : C.danger, fontWeight: 600, marginLeft: "auto" }}>{p.status}</span>
-          </Row>
+        {todayPoops.map(p => editId === p.id ? (
+          <div key={p.id} style={{ padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8 }}>{p.type} 編輯中</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: 8, marginBottom: 8 }}>
+              <SInput label="日期" type="date" value={editDate} onChange={e => setEditDate(e.target.value)} max={todayISO()} />
+              <SInput label="時間" type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
+            </div>
+            <SLabel>類型</SLabel>
+            <PillGroup items={POOP_TYPES} active={editType} setActive={handleEditTypeChange} color={C.teal} />
+            <SLabel>量</SLabel>
+            <Counter value={editAmount} onChange={setEditAmount} unit={editType === "尿尿" ? "拳頭" : "塊"} />
+            <SLabel>狀況</SLabel>
+            <PillGroup items={editStatusOptions} active={editStatus} setActive={setEditStatus} color={C.teal} danger={editDangerItems} />
+            {editIsPoop && <>
+              <SLabel>便便形狀</SLabel>
+              {shapeGroups.map(({ group, items }) => (
+                <div key={group} style={{ marginBottom: 6 }}>
+                  <div style={{ fontSize: 10, color: groupColor[group], fontWeight: 600, marginBottom: 4 }}>{group}</div>
+                  <PillGroup items={items} active={editShape} setActive={setEditShape} color={C.teal} />
+                </div>
+              ))}
+            </>}
+            <SInput label="備註（可選）" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="例：貓砂量正常" />
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={() => saveEdit(p)} style={{ flex: 1, padding: "8px 0", background: C.teal, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>儲存</button>
+              <button onClick={() => setEditId(null)} style={{ padding: "8px 16px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>取消</button>
+            </div>
+          </div>
+        ) : (
+          <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <Tag color={C.teal}>{p.time}</Tag>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{p.type}</span>
+              <span style={{ fontSize: 12, color: C.muted }}>{p.amount}{p.type === "尿尿" ? "拳頭" : "塊"}</span>
+              {p.shape && <span style={{ fontSize: 11, color: C.muted }}>{p.shape}</span>}
+              <span style={{ fontSize: 12, color: (p.status === "正常" || p.status === "無異常") ? C.green : C.danger, fontWeight: 600, marginLeft: "auto" }}>{p.status}</span>
+            </div>
+            <button onClick={() => startEdit(p)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
+            <button onClick={() => { setPoops(prev => (prev||[]).filter(x => x.id !== p.id)); addLog("刪除", "如廁", `${p.type} ${p.amount||""}${p.type==="尿尿"?"拳頭":"塊"}`); }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", opacity: 0.6 }}><i className="ri-delete-bin-6-line" /></button>
+          </div>
         ))}
       </Card>
     </div>
@@ -830,7 +909,7 @@ function SettingsTab({ ctx }) {
   const typeColor = { "乾飼料": C.blue, "罐頭": C.teal, "生食": C.green, "零食": C.orange, "其他": C.purple };
   return (
     <div className="content-grid" style={{ display: "grid", gap: 20 }}>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>貓咪大頭貼</div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onAvatarFile} />
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -856,17 +935,15 @@ function SettingsTab({ ctx }) {
           </div>
         </div>
       </Card>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>タビ 的基本資料</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(160px, 100%), 1fr))", gap: 12 }}>
-          <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
-          <SInput label="出生年月日" type="date" value={birthdate} max={todayISO()} onChange={e => setBirthdate(e.target.value)} />
-        </div>
+        <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
+        <SInput label="出生年月日" type="date" value={birthdate} max={todayISO()} onChange={e => setBirthdate(e.target.value)} />
         {bdMonths !== null && <div style={{ fontSize: 11, color: C.teal, marginBottom: 10 }}>= {ageLabel(bdMonths)}</div>}
         <SLabel>結紮狀態</SLabel>
         <PillGroup items={["已結紮", "未結紮"]} active={n ? "已結紮" : "未結紮"} setActive={v => setN(v === "已結紮")} />
       </Card>
-      <Card>
+      <Card className="full-col">
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>每日熱量估算</div>
         {preview ? (
           <>
@@ -912,12 +989,12 @@ function SettingsTab({ ctx }) {
 
 // UI helpers
 function Card({ children, style, className }) {
-  return <div className={`card${className ? " "+className : ""}`} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 16, boxShadow: "var(--shadow)", marginBottom: 0, ...style }}>{children}</div>;
+  return <div className={`card${className ? " "+className : ""}`} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, boxShadow: "var(--shadow)", marginBottom: 0, ...style }}>{children}</div>;
 }
 function StatCard({ label, value, unit, color, onClick, sub }) {
   return (
-    <div onClick={onClick} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14, cursor: "pointer" }}>
-      <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+    <div onClick={onClick} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14, cursor: "pointer", boxShadow: "var(--shadow)" }}>
+      <div style={{ fontSize: 10, color: C.muted, fontWeight: 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
         <span style={{ fontSize: 24, fontWeight: 700, color }}>{value}</span>
         <span style={{ fontSize: 11, color: C.muted }}>{unit}</span>
@@ -957,27 +1034,27 @@ function PillGroup({ items, active, setActive, color, danger = [] }) {
         const isDanger = danger.includes(item) && isActive;
         return (
           <button key={item} onClick={() => setActive(item)} style={{
-            padding: "5px 13px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: isActive ? 600 : 400,
+            padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: isActive ? 600 : 500,
             border: `1px solid ${isActive && !isDanger ? ac : C.border}`,
-            background: isDanger ? C.danger : isActive ? ac : "transparent",
-            color: isActive ? "#fff" : C.muted,
+            background: isDanger ? C.danger : isActive ? ac : C.pill,
+            color: isActive ? "#fff" : C.text,
           }}>{item}</button>
         );
       })}
     </div>
   );
 }
-function SLabel({ children }) { return <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600, letterSpacing: "0.03em" }}>{children}</div>; }
+function SLabel({ children }) { return <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontWeight: 500, letterSpacing: "0.01em" }}>{children}</div>; }
 function SInput({ label, ...props }) {
   return (
     <div style={{ marginBottom: 12, minWidth: 0 }}>
       {label && <SLabel>{label}</SLabel>}
-      <input {...props} style={{ width: "100%", minWidth: 0, padding: "8px 11px", borderRadius: 8, border: `1px solid var(--input-border)`, fontSize: 14, background: "var(--input-bg)", color: C.text }} />
+      <input {...props} style={{ width: "100%", minWidth: 0, padding: "9px 12px", borderRadius: 6, border: `1px solid var(--input-border)`, fontSize: 14, background: "var(--input-bg)", color: C.text }} />
     </div>
   );
 }
 function PrimaryBtn({ onClick, children, color }) {
-  return <button onClick={onClick} className="btn-fill" style={{ width: "100%", padding: "11px 0", minHeight: 44, background: color || C.blue, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer", marginTop: 6, letterSpacing: "0.02em" }}>{children}</button>;
+  return <button onClick={onClick} className="btn-fill" style={{ width: "100%", padding: "11px 0", minHeight: 44, background: color || C.blue, color: "#fff", border: "none", borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: "pointer", marginTop: 6, letterSpacing: "0.01em" }}>{children}</button>;
 }
 function Row({ children, onDel }) {
   return (
@@ -988,7 +1065,7 @@ function Row({ children, onDel }) {
   );
 }
 function Tag({ children, color }) {
-  return <span style={{ background: `${color}18`, color, fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4 }}>{children}</span>;
+  return <span style={{ background: `${color}18`, color, fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, letterSpacing: "0.02em" }}>{children}</span>;
 }
 function Empty() { return <div style={{ color: C.muted, fontSize: 12, textAlign: "center", padding: "18px 0", opacity: 0.45 }}>尚無紀錄</div>; }
 
