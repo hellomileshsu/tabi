@@ -933,10 +933,8 @@ function SettingsTab({ ctx }) {
       </Card>
       <Card>
         <div style={{ fontWeight: 700, fontSize: 14, color: C.blue, marginBottom: 14 }}>タビ 的基本資料</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(160px, 100%), 1fr))", gap: 12 }}>
-          <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
-          <SInput label="出生年月日" type="date" value={birthdate} max={todayISO()} onChange={e => setBirthdate(e.target.value)} />
-        </div>
+        <SInput label="體重 (kg)" type="number" value={w} onChange={e => setW(e.target.value)} placeholder="例：4.2" />
+        <SInput label="出生年月日" type="date" value={birthdate} max={todayISO()} onChange={e => setBirthdate(e.target.value)} />
         {bdMonths !== null && <div style={{ fontSize: 11, color: C.teal, marginBottom: 10 }}>= {ageLabel(bdMonths)}</div>}
         <SLabel>結紮狀態</SLabel>
         <PillGroup items={["已結紮", "未結紮"]} active={n ? "已結紮" : "未結紮"} setActive={v => setN(v === "已結紮")} />
