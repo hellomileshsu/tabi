@@ -228,7 +228,7 @@ function App() {
   const ctx = { feeds: feeds||[], setFeeds, poops: poops||[], setPoops, changelog: changelog||[], profile: profile||{}, setProfile, avatar, setAvatar, dryKcal, setDryKcal, customFoods: customFoods||[], setCustomFoods, foods, dailyGoal, todayFeeds, todayPoops, totalKcal, selectedDate, setSelectedDate, dark, toggleDark, addLog };
 
   const DarkBtn = () => (
-    <button onClick={toggleDark} title={dark ? "切換亮色" : "切換暗色"} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 18, display: "flex", alignItems: "center", padding: 4 }}>
+    <button onClick={toggleDark} className="btn-icon" title={dark ? "切換亮色" : "切換暗色"} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 18, display: "flex", alignItems: "center", padding: 4 }}>
       <i className={dark ? "ri-sun-line" : "ri-moon-line"} />
     </button>
   );
@@ -251,7 +251,7 @@ function App() {
           </div>
           <nav style={{ padding: "8px 12px", flex: 1 }}>
             {NAV.map(n => (
-              <button key={n.key} onClick={() => setTab(n.key)} style={{
+              <button key={n.key} onClick={() => setTab(n.key)} className="nav-btn" style={{
                 display: "flex", alignItems: "center", gap: 10, width: "100%",
                 padding: "9px 12px", borderRadius: 8, border: "none", cursor: "pointer",
                 background: "transparent",
@@ -340,10 +340,10 @@ function DateNav({ selectedDate, setSelectedDate }) {
   });
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-      <button onClick={() => go(-1)} style={circBtn(true)}><i className="ri-arrow-left-s-line" /></button>
+      <button onClick={() => go(-1)} className="btn-ghost" style={circBtn(true)}><i className="ri-arrow-left-s-line" /></button>
 
       {/* Clickable date card — opens native date picker */}
-      <div style={{ flex: 1, position: "relative", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "7px 14px", textAlign: "center", cursor: "pointer", overflow: "hidden" }}>
+      <div className="hoverable" style={{ flex: 1, position: "relative", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "7px 14px", textAlign: "center", cursor: "pointer", overflow: "hidden" }}>
         <input type="date" value={selectedDate} max={todayISO()} onChange={e => e.target.value && setSelectedDate(e.target.value)}
           style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
         <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
@@ -354,10 +354,10 @@ function DateNav({ selectedDate, setSelectedDate }) {
         </div>
       </div>
 
-      <button onClick={() => go(1)} disabled={isToday} style={circBtn(!isToday)}><i className="ri-arrow-right-s-line" /></button>
+      <button onClick={() => go(1)} disabled={isToday} className="btn-ghost" style={circBtn(!isToday)}><i className="ri-arrow-right-s-line" /></button>
 
       {!isToday && (
-        <button onClick={() => setSelectedDate(todayISO())} style={{
+        <button onClick={() => setSelectedDate(todayISO())} className="btn-fill" style={{
           height: 36, padding: "0 14px", background: C.blue, color: "#fff",
           border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700,
           cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
@@ -402,11 +402,11 @@ function MonthChart({ feeds, dailyGoal, selectedDate, setSelectedDate }) {
     <Card style={{ marginBottom: 16 }}>
       {/* Month navigation header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <button onClick={() => goMonth(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 20, padding: "0 4px", display: "flex", alignItems: "center" }}>
+        <button onClick={() => goMonth(-1)} className="btn-ghost" style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: 20, padding: "0 4px", display: "flex", alignItems: "center" }}>
           <i className="ri-arrow-left-s-line" />
         </button>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{year} 年 {month} 月</span>
-        <button onClick={() => goMonth(1)} disabled={!canNext} style={{ background: "none", border: "none", cursor: canNext ? "pointer" : "default", color: C.muted, fontSize: 20, opacity: canNext ? 1 : 0.25, padding: "0 4px", display: "flex", alignItems: "center" }}>
+        <button onClick={() => goMonth(1)} disabled={!canNext} className="btn-ghost" style={{ background: "none", border: "none", cursor: canNext ? "pointer" : "default", color: C.muted, fontSize: 20, opacity: canNext ? 1 : 0.25, padding: "0 4px", display: "flex", alignItems: "center" }}>
           <i className="ri-arrow-right-s-line" />
         </button>
       </div>
@@ -436,6 +436,7 @@ function MonthChart({ feeds, dailyGoal, selectedDate, setSelectedDate }) {
           const dashOffset = CIRC * (1 - pct / 100);
           return (
             <div key={day} onClick={() => !isFuture && setSelectedDate(dateStr)}
+              className={!isFuture && !isSel ? "hoverable-cell" : ""}
               style={{ cursor: isFuture ? "default" : "pointer", opacity: isFuture ? 0.3 : 1,
                 display: "flex", flexDirection: "column", alignItems: "center",
                 padding: "4px 2px", borderRadius: 8,
@@ -616,7 +617,7 @@ function FeedTab({ ctx }) {
             const isNow = label === "現在";
             const active = !isNow && timeInput === t;
             return (
-              <button key={label} onClick={() => setTimeInput(val)} style={{
+              <button key={label} onClick={() => setTimeInput(val)} className="btn-ghost" style={{
                 padding: "4px 11px", borderRadius: 6, fontSize: 12, fontWeight: active ? 700 : 400,
                 border: `1px solid ${active ? C.blue : C.border}`,
                 background: active ? `${C.blue}18` : "transparent",
@@ -638,7 +639,7 @@ function FeedTab({ ctx }) {
       <Card className="full-col">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <span style={{ fontWeight: 700, fontSize: 14, color: C.text }}>今日紀錄</span>
-          <button onClick={() => setShowRef(!showRef)} style={{ fontSize: 12, color: C.blue, background: "none", border: "none", cursor: "pointer" }}>熱量參考表 {showRef ? "▲" : "▼"}</button>
+          <button onClick={() => setShowRef(!showRef)} className="btn-ghost" style={{ fontSize: 12, color: C.blue, background: "none", border: "none", cursor: "pointer", padding: "3px 8px", borderRadius: 6 }}>熱量參考表 {showRef ? "▲" : "▼"}</button>
         </div>
         {showRef && (
           <div style={{ background: `${C.teal}10`, borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 6 }}>
@@ -661,8 +662,8 @@ function FeedTab({ ctx }) {
               <SInput label="剩食 (g)" type="number" value={editLeftover} onChange={e => setEditLeftover(e.target.value)} placeholder="0" />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => saveEdit(f)} style={{ flex: 1, padding: "8px 0", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>儲存</button>
-              <button onClick={() => setEditId(null)} style={{ padding: "8px 16px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>取消</button>
+              <button onClick={() => saveEdit(f)} className="btn-fill" style={{ flex: 1, padding: "8px 0", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>儲存</button>
+              <button onClick={() => setEditId(null)} className="btn-ghost" style={{ padding: "8px 16px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>取消</button>
             </div>
           </div>
         ) : (
@@ -674,8 +675,8 @@ function FeedTab({ ctx }) {
               {f.leftover > 0 && <span style={{ fontSize: 11, color: C.danger, fontWeight: 600 }}>剩 {f.leftover}g</span>}
               <span style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginLeft: "auto" }}>{f.kcal} kcal</span>
             </div>
-            <button onClick={() => startEdit(f)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
-            <button onClick={() => { setFeeds(prev => (prev||[]).filter(x => x.id !== f.id)); addLog("刪除", "餵食", `${f.food} ${f.grams}g`); }} style={{ background: "none", border: "none", color: C.danger, cursor: "pointer", fontSize: 14, opacity: 0.55 }}>✕</button>
+            <button onClick={() => startEdit(f)} className="btn-icon" style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
+            <button onClick={() => { setFeeds(prev => (prev||[]).filter(x => x.id !== f.id)); addLog("刪除", "餵食", `${f.food} ${f.grams}g`); }} className="btn-danger-icon" style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.55 }}>✕</button>
           </div>
         ))}
         {todayFeeds.length > 0 && (
@@ -787,7 +788,7 @@ function PoopTab({ ctx }) {
             const isNow = label === "現在";
             const active = !isNow && timeInput === t;
             return (
-              <button key={label} onClick={() => setTimeInput(val)} style={{
+              <button key={label} onClick={() => setTimeInput(val)} className="btn-ghost" style={{
                 padding: "4px 11px", borderRadius: 6, fontSize: 12, fontWeight: active ? 700 : 400,
                 border: `1px solid ${active ? C.teal : C.border}`,
                 background: active ? `${C.teal}18` : "transparent",
@@ -827,8 +828,8 @@ function PoopTab({ ctx }) {
             </>}
             <SInput label="備註（可選）" value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="例：貓砂量正常" />
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button onClick={() => saveEdit(p)} style={{ flex: 1, padding: "8px 0", background: C.teal, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>儲存</button>
-              <button onClick={() => setEditId(null)} style={{ padding: "8px 16px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>取消</button>
+              <button onClick={() => saveEdit(p)} className="btn-fill" style={{ flex: 1, padding: "8px 0", background: C.teal, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>儲存</button>
+              <button onClick={() => setEditId(null)} className="btn-ghost" style={{ padding: "8px 16px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>取消</button>
             </div>
           </div>
         ) : (
@@ -840,8 +841,8 @@ function PoopTab({ ctx }) {
               {p.shape && <span style={{ fontSize: 11, color: C.muted }}>{p.shape}</span>}
               <span style={{ fontSize: 12, color: (p.status === "正常" || p.status === "無異常") ? C.green : C.danger, fontWeight: 600, marginLeft: "auto" }}>{p.status}</span>
             </div>
-            <button onClick={() => startEdit(p)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
-            <button onClick={() => { setPoops(prev => (prev||[]).filter(x => x.id !== p.id)); addLog("刪除", "如廁", `${p.type} ${p.amount||""}${p.type==="尿尿"?"拳頭":"塊"}`); }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", opacity: 0.6 }}><i className="ri-delete-bin-6-line" /></button>
+            <button onClick={() => startEdit(p)} className="btn-icon" style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", opacity: 0.65 }}><i className="ri-pencil-line" /></button>
+            <button onClick={() => { setPoops(prev => (prev||[]).filter(x => x.id !== p.id)); addLog("刪除", "如廁", `${p.type} ${p.amount||""}${p.type==="尿尿"?"拳頭":"塊"}`); }} className="btn-danger-icon" style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", opacity: 0.6 }}><i className="ri-delete-bin-6-line" /></button>
           </div>
         ))}
       </Card>
@@ -929,8 +930,8 @@ function SettingsTab({ ctx }) {
             <div style={{ fontSize: 13, color: C.text, fontWeight: 600, marginBottom: 6 }}>點擊圖片上傳照片</div>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>支援 JPG、PNG、HEIC<br />自動裁切為正方形</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => fileRef.current.click()} style={{ fontSize: 12, padding: "5px 14px", borderRadius: 7, background: C.blue, color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>選擇照片</button>
-              {avatar && <button onClick={() => setAvatar(null)} style={{ fontSize: 12, padding: "5px 14px", borderRadius: 7, background: "transparent", color: C.danger, border: `1px solid ${C.danger}40`, cursor: "pointer" }}>移除</button>}
+              <button onClick={() => fileRef.current.click()} className="btn-fill" style={{ fontSize: 12, padding: "5px 14px", borderRadius: 7, background: C.blue, color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>選擇照片</button>
+              {avatar && <button onClick={() => setAvatar(null)} className="btn-ghost" style={{ fontSize: 12, padding: "5px 14px", borderRadius: 7, background: "transparent", color: C.danger, border: `1px solid ${C.danger}40`, cursor: "pointer" }}>移除</button>}
             </div>
           </div>
         </div>
@@ -993,7 +994,7 @@ function Card({ children, style, className }) {
 }
 function StatCard({ label, value, unit, color, onClick, sub }) {
   return (
-    <div onClick={onClick} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14, cursor: "pointer", boxShadow: "var(--shadow)" }}>
+    <div onClick={onClick} className="hoverable" style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14, cursor: "pointer", boxShadow: "var(--shadow)" }}>
       <div style={{ fontSize: 10, color: C.muted, fontWeight: 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
         <span style={{ fontSize: 24, fontWeight: 700, color }}>{value}</span>
@@ -1017,11 +1018,11 @@ function Counter({ value, onChange, unit }) {
   const btn = { width: 40, height: 40, borderRadius: 10, border: `1px solid ${C.border}`, background: "transparent", cursor: "pointer", fontSize: 20, color: C.text, display: "flex", alignItems: "center", justifyContent: "center" };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-      <button onClick={() => onChange(Math.max(0.5, +(value - 0.5).toFixed(1)))} style={btn}>−</button>
+      <button onClick={() => onChange(Math.max(0.5, +(value - 0.5).toFixed(1)))} className="btn-ghost" style={btn}>−</button>
       <span style={{ fontSize: 16, fontWeight: 700, color: C.text, minWidth: 48, textAlign: "center" }}>
         {value} <span style={{ fontSize: 12, color: C.muted, fontWeight: 400 }}>{unit}</span>
       </span>
-      <button onClick={() => onChange(+(value + 0.5).toFixed(1))} style={btn}>+</button>
+      <button onClick={() => onChange(+(value + 0.5).toFixed(1))} className="btn-ghost" style={btn}>+</button>
     </div>
   );
 }
@@ -1060,7 +1061,7 @@ function Row({ children, onDel }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
       <div style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>{children}</div>
-      <button onClick={onDel} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", opacity: 0.6 }}><i className="ri-delete-bin-6-line" /></button>
+      <button onClick={onDel} className="btn-danger-icon" style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", opacity: 0.6 }}><i className="ri-delete-bin-6-line" /></button>
     </div>
   );
 }
